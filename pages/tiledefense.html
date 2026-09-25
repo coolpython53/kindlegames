@@ -12,7 +12,7 @@
 <h1>Tile Defense</h1>
 
 <table class="stats"><tr>
-  <td>Wave<br><b id="sWave">0/12</b></td>
+  <td>Wave<br><b id="sWave">0</b></td>
   <td>Lives<br><b id="sLives">10</b></td>
   <td>Money<br><b id="sMoney">$25</b></td>
   <td>Enemies<br><b id="sLeft">0</b></td>
@@ -44,15 +44,16 @@
 </tr></table>
 
 <div class="help">
-  <p><b>How to play.</b> Pick a tower, then tap an empty white square to build it. Tap a tower to see its range. Enemies walk the gray path from &gt; to B. Each press of Next moves the game one turn.</p>
+  <p><b>How to play.</b> Waves never end: survive as long as you can. Pick a tower, then tap an empty white square to build it. Tap a tower to see its range. Enemies walk the gray path from &gt; to B. Each press of Next moves the game one turn.</p>
   <p><b>Each turn:</b> bullets fly (*), then enemies step, then towers fire. Bullets start at the tower and take a turn or more to arrive, so aim ahead of the crowd.</p>
-  <p><b>Towers.</b> Gun: range 2, 1 damage, fires every turn, bullet moves 1 square a turn. Cannon: range 2, 2 damage to everything within 1 square of impact, fires every 3 turns, bullet moves 2 squares a turn. Sniper: range 5, 3 damage, fires every 3 turns, bullet moves 3 squares a turn.</p>
+  <p><b>Towers.</b> Gun: range 2, 1 damage, fires every turn, bullet moves 1 square a turn. Cannon: range 2, 2 damage to everything within 1 square of impact, fires every 3 turns, bullet moves 2 squares a turn. Sniper: range 5, 3 damage, fires every 3 turns, bullet moves 3 squares a turn. Every tower you own makes the next one cost more (+25% of its base price per tower). Selling gives back half of what you paid.</p>
   <p><b>Add road.</b> Between waves, pay $100 to add a whole new section of road and ground. The base moves to the end of the new road, so enemies have farther to walk. The field grows wider twice, then grows downward (scroll to see it). Any tower standing where new road goes is removed and fully refunded.</p>
   <p><b>Enemies.</b> All enemies move 1 square a turn. Numbers show health. T = tank (extra health, costs 2 lives if it reaches the base). Bullets that chase too long (8 turns) fizzle.</p>
 </div>
 
 <script>
-var W, H, MAXW = 9999999999999;
+var W, H;
+var PRICE_STEP = 0.25; // each tower you own adds 25% of a tower's base price
 var ROAD_COST = 100, MAX_WIDE = 2, hSections;
 var TYPES = {
   G: { name: 'Gun',    cost: 8,  range: 2, dmg: 1, cd: 1, speed: 1, splash: 0 },
@@ -62,10 +63,22 @@ var TYPES = {
 var WAYPOINTS = [[0,1],[8,1],[8,3],[2,3],[2,5],[10,5]];
 
 var path, pathIdx, towers, enemies, bullets, queue;
-var money, lives, wave, waveActive, spawnTimer, tickNo, tool, selected, logs, over, won, nextId, kills;
+var money, lives, wave, waveActive, spawnTimer, tickNo, tool, selected, logs, over, nextId, kills;
 
 function sgn(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
 function key(x, y) { return x + ',' + y; }
+
+function towerCount() {
+  var n = 0;
+  for (var k in towers) n++;
+  return n;
+}
+
+// Current price of a tower type: base price, plus 25% of base for every tower you own.
+function price(t) {
+  var b = TYPES[t].cost;
+  return b + Math.floor(b * PRICE_STEP * towerCount());
+}
 
 function buildPath() {
   path = [[WAYPOINTS[0][0], WAYPOINTS[0][1]]];
@@ -93,7 +106,7 @@ function roadTo(tx, ty) {
     x += sgn(tx - x); y += sgn(ty - y);
     var k = key(x, y);
     if (towers[k]) {
-      refund += TYPES[towers[k].type].cost;
+      refund += towers[k].paid;
       if (selected === k) selected = null;
       delete towers[k];
     }
@@ -171,7 +184,7 @@ function newGame() {
   money = 25; lives = 10; wave = 0; waveActive = false;
   towers = {}; enemies = []; bullets = []; queue = [];
   spawnTimer = 0; tickNo = 0; tool = 'G'; selected = null;
-  logs = []; over = false; won = false; nextId = 1; kills = 0;
+  logs = []; over = false; nextId = 1; kills = 0;
   addLog('Build some towers, then press Send wave.');
   render();
 }
@@ -326,10 +339,6 @@ function tick() {
     var bonus = 4 + wave;
     money += bonus;
     addLog('Wave ' + wave + ' cleared. Bonus +$' + bonus + '.');
-    if (wave >= MAXW) {
-      over = true; won = true;
-      addLog('You held off all ' + MAXW + ' waves!');
-    }
     return false;
   }
   return true;
@@ -353,7 +362,7 @@ function tapCell(x, y) {
   }
   if (towers[k]) {
     if (tool === 'X') {
-      var refund = Math.floor(TYPES[towers[k].type].cost / 2);
+      var refund = Math.floor(towers[k].paid / 2);
       money += refund;
       addLog('Sold ' + TYPES[towers[k].type].name + ' for $' + refund + '.');
       delete towers[k];
@@ -364,18 +373,18 @@ function tapCell(x, y) {
     render(); return;
   }
   if (tool === 'X') { addLog('Tap a tower to sell it.'); render(); return; }
-  var T = TYPES[tool];
-  if (money < T.cost) { addLog(T.name + ' costs $' + T.cost + '. You have $' + money + '.'); render(); return; }
-  money -= T.cost;
-  towers[k] = { type: tool, cd: 0 };
+  var T = TYPES[tool], cost = price(tool);
+  if (money < cost) { addLog(T.name + ' costs $' + cost + '. You have $' + money + '.'); render(); return; }
+  money -= cost;
+  towers[k] = { type: tool, cd: 0, paid: cost };
   selected = k;
-  addLog('Built ' + T.name + '.');
+  addLog('Built ' + T.name + ' for $' + cost + '.');
   render();
 }
 
 function render() {
   var x, y, i, k, p;
-  document.getElementById('sWave').innerHTML = wave + '/' + MAXW;
+  document.getElementById('sWave').innerHTML = wave;
   document.getElementById('sLives').innerHTML = lives;
   document.getElementById('sMoney').innerHTML = '$' + money;
   document.getElementById('sLeft').innerHTML = enemies.length + queue.length;
@@ -440,8 +449,11 @@ function render() {
   for (i = 0; i < ids.length; i++) {
     document.getElementById('t' + ids[i]).className = (tool === ids[i]) ? 'on' : '';
   }
+  document.getElementById('tG').innerHTML = 'G Gun<br>$' + price('G');
+  document.getElementById('tC').innerHTML = 'C Cannon<br>$' + price('C');
+  document.getElementById('tS').innerHTML = 'S Sniper<br>$' + price('S');
 
-  var label = over ? (won ? 'You win!' : 'Game over') : (waveActive ? 'Next turn' : 'Send wave ' + (wave + 1));
+  var label = over ? 'Game over' : (waveActive ? 'Next turn' : 'Send wave ' + (wave + 1));
   var ns = ['bNext', 'bNext2', 'bFive', 'bFive2'];
   for (i = 0; i < ns.length; i++) {
     var btn = document.getElementById(ns[i]);
@@ -457,7 +469,7 @@ function render() {
       (T.splash ? ' (splash)' : '') + ', fires every ' + T.cd + (T.cd > 1 ? ' turns' : ' turn') +
       ', bullet speed ' + T.speed + '. ' +
       (tw.cd > 0 ? 'Reloading: ' + tw.cd + '.' : 'Ready.') +
-      ' Sells for $' + Math.floor(T.cost / 2) + '. Range is shaded.';
+      ' Sells for $' + Math.floor(tw.paid / 2) + '. Range is shaded.';
   } else {
     info = 'Kills: ' + kills + '. Selected: ' + (tool === 'X' ? 'Sell' : TYPES[tool].name) + '.';
   }
