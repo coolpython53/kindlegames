@@ -13,6 +13,12 @@
       "description": "Literally just minesweeper.",
       "html": "pages/minesweep.html",
       "css": "pages/minesweep.css"
+    },
+    {
+      "title": "Farm",
+      "description": "A farming game",
+      "html": "pages/farm.html",
+      "css": "pages/farm.css"
     }
   ]
 }
