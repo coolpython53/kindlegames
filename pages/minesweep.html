@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>No-Guess Minesweeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="minesweep.css">
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>Minesweeper</h1>
+    <p class="sub">Every board can be cleared with logic alone. If you ever have to guess, you missed a clue.</p>
+    <div class="levels" role="group" aria-label="Difficulty">
+      <button data-level="easy">Easy<small>9×9</small></button>
+      <button data-level="medium">Medium<small>16×16</small></button>
+      <button data-level="hard">Hard<small>30×16</small></button>
+    </div>
+  </div>
+  <section class="panel">
+    <div class="bar">
+      <span class="stat" title="Mines left"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3v15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 3.5l9 3.8-9 3.8z" fill="var(--flag)"/></svg><span id="left" aria-label="Mines left">0</span></span>
+      <div class="actions">
+        <button id="flagmode" aria-pressed="false" title="When on, tapping places flags">Flag mode</button>
+        <button id="hint">Hint</button>
+        <button id="new">New game</button>
+      </div>
+      <span class="stat time" title="Time"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="11" r="7"/><path d="M10 7.5V11l2.5 2M8 2h4" stroke-linecap="round"/></svg><span id="time" aria-label="Time">0:00</span></span>
+    </div>
+    <div class="wrap"><div id="board" role="grid" aria-label="Minefield"></div></div>
+  </section>
+  <p id="status" aria-live="polite"></p>
+  <p class="help">Click to open a tile. Right-click or long-press to flag. Click a number once all its mines are flagged to open the rest around it. Keyboard: arrows to move, Enter to open, F to flag.</p>
+  <div class="best" id="best"></div>
+</main>
+<script>
+function neighbors(W, H) {
+  const nb = new Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const a = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < W && ny < H) a.push(ny * W + nx);
+    }
+    nb[y * W + x] = a;
+  }
+  return nb;
+}
+
+function counts(mine, nb, N) {
+  const num = new Uint8Array(N);
+  for (let i = 0; i < N; i++) if (!mine[i]) {
+    let c = 0; for (const n of nb[i]) c += mine[n]; num[i] = c;
+  }
+  return num;
+}
+
+function enumerate(comp, cons, limit) {
+  const L = comp.cells.length;
+  comp.ok = false; comp.minK = 0; comp.maxK = L;
+  if (L > 64) return;
+  const loc = new Map(comp.cells.map((c, j) => [c, j]));
+  const cc = comp.cons.map(k => ({ need: cons[k].need, m: 0, u: cons[k].cells.length }));
+  const byCell = Array.from({ length: L }, () => []);
+  comp.cons.forEach((k, q) => { for (const c of cons[k].cells) byCell[loc.get(c)].push(q); });
+  const assign = new Uint8Array(L), sols = new Float64Array(L + 1), mk = [];
+  let nodes = 0, abort = false;
+  const rec = (p, k) => {
+    if (abort) return;
+    if (++nodes > limit) { abort = true; return; }
+    if (p === L) {
+      sols[k]++;
+      const a = mk[k] || (mk[k] = new Float64Array(L));
+      for (let j = 0; j < L; j++) if (assign[j]) a[j]++;
+      return;
+    }
+    const lst = byCell[p];
+    for (let v = 0; v < 2; v++) {
+      let ok = true;
+      for (const q of lst) { const C = cc[q]; C.u--; C.m += v; if (C.m > C.need || C.m + C.u < C.need) ok = false; }
+      if (ok) { assign[p] = v; rec(p + 1, k + v); }
+      for (const q of lst) { const C = cc[q]; C.u++; C.m -= v; }
+      if (abort) return;
+    }
+  };
+  rec(0, 0);
+  if (abort) return;
+  let lo = -1, hi = -1;
+  for (let k = 0; k <= L; k++) if (sols[k] > 0) { if (lo < 0) lo = k; hi = k; }
+  if (lo < 0) return;
+  comp.ok = true; comp.minK = lo; comp.maxK = hi; comp.sols = sols; comp.mk = mk;
+}
+
+// Find cells that are certainly safe or certainly mines, using only revealed numbers,
+// the given known-mine array, and the total mine count. Returns null if nothing is certain.
+function deduce(N, nb, num, rev, flg, M, limit) {
+  const safe = new Set(), mines = new Set();
+  let revN = 0, flgN = 0;
+  for (let i = 0; i < N; i++) { if (rev[i]) revN++; else if (flg[i]) flgN++; }
+  const cons = [], cellCons = new Map();
+  for (let i = 0; i < N; i++) {
+    if (!rev[i] || !num[i]) continue;
+    let f = 0; const u = [];
+    for (const n of nb[i]) { if (flg[n]) f++; else if (!rev[n]) u.push(n); }
+    if (!u.length) continue;
+    const need = num[i] - f;
+    if (need === 0) u.forEach(x => safe.add(x));
+    else if (need === u.length) u.forEach(x => mines.add(x));
+    const k = cons.length;
+    cons.push({ cells: u, need, set: new Set(u) });
+    for (const x of u) { let a = cellCons.get(x); if (!a) cellCons.set(x, a = []); a.push(k); }
+  }
+  if (safe.size || mines.size) return { safe, mines };
+
+  // Pairwise reasoning between overlapping numbers
+  for (let a = 0; a < cons.length; a++) {
+    const A = cons[a], done = new Set();
+    for (const x of A.cells) for (const b of cellCons.get(x)) {
+      if (b <= a || done.has(b)) continue;
+      done.add(b);
+      const B = cons[b];
+      let inter = 0; for (const y of B.cells) if (A.set.has(y)) inter++;
+      const oA = A.cells.length - inter, oB = B.cells.length - inter;
+      const maxI = Math.min(inter, A.need, B.need);
+      const minI = Math.max(0, A.need - oA, B.need - oB);
+      if (oA) {
+        const lo = A.need - maxI, hi = A.need - minI;
+        if (hi === 0 || lo === oA) for (const y of A.cells) if (!B.set.has(y)) (hi === 0 ? safe : mines).add(y);
+      }
+      if (oB) {
+        const lo = B.need - maxI, hi = B.need - minI;
+        if (hi === 0 || lo === oB) for (const y of B.cells) if (!A.set.has(y)) (hi === 0 ? safe : mines).add(y);
+      }
+    }
+  }
+  if (safe.size || mines.size) return { safe, mines };
+
+  const rem = M - flgN, unk = N - revN - flgN;
+  if (unk > 0 && (rem === 0 || rem === unk)) {
+    for (let i = 0; i < N; i++) if (!rev[i] && !flg[i]) (rem === 0 ? safe : mines).add(i);
+    return { safe, mines };
+  }
+
+  // Exhaustive enumeration per connected frontier group, with mine-count bounds
+  const seen = new Set(), comps = [];
+  for (const s of cellCons.keys()) {
+    if (seen.has(s)) continue;
+    const cells = [s]; seen.add(s); const cset = new Set();
+    for (let h = 0; h < cells.length; h++) for (const k of cellCons.get(cells[h])) {
+      if (cset.has(k)) continue; cset.add(k);
+      for (const y of cons[k].cells) if (!seen.has(y)) { seen.add(y); cells.push(y); }
+    }
+    comps.push({ cells, cons: [...cset] });
+  }
+  let frontier = 0;
+  for (const c of comps) { frontier += c.cells.length; enumerate(c, cons, limit); }
+  const nonF = unk - frontier;
+  let sumMin = 0, sumMax = 0;
+  for (const c of comps) { sumMin += c.minK; sumMax += c.maxK; }
+  for (const c of comps) {
+    if (!c.ok) continue;
+    const lo = Math.max(c.minK, rem - (sumMax - c.maxK) - nonF);
+    const hi = Math.min(c.maxK, rem - (sumMin - c.minK));
+    let tot = 0; const cnt = new Float64Array(c.cells.length);
+    for (let k = lo; k <= hi; k++) {
+      if (!c.sols[k]) continue;
+      tot += c.sols[k]; const a = c.mk[k];
+      for (let j = 0; j < a.length; j++) cnt[j] += a[j];
+    }
+    if (!tot) continue;
+    for (let j = 0; j < cnt.length; j++) {
+      if (cnt[j] === 0) safe.add(c.cells[j]);
+      else if (cnt[j] === tot) mines.add(c.cells[j]);
+    }
+  }
+  if (nonF > 0) {
+    const allSafe = rem - sumMin <= 0, allMine = rem - sumMax >= nonF;
+    if (allSafe || allMine) for (let i = 0; i < N; i++)
+      if (!rev[i] && !flg[i] && !cellCons.has(i)) (allSafe ? safe : mines).add(i);
+  }
+  return (safe.size || mines.size) ? { safe, mines } : null;
+}
+
+function solve(W, H, M, mine, s, nb, limit) {
+  const N = W * H, num = counts(mine, nb, N);
+  const rev = new Uint8Array(N), flg = new Uint8Array(N);
+  let revN = 0; const target = N - M;
+  const open = i => {
+    const st = [i];
+    while (st.length) {
+      const c = st.pop();
+      if (rev[c] || flg[c]) continue;
+      if (mine[c]) throw new Error('solver opened a mine');
+      rev[c] = 1; revN++;
+      if (num[c] === 0) for (const n of nb[c]) if (!rev[n]) st.push(n);
+    }
+  };
+  open(s);
+  while (revN < target) {
+    const d = deduce(N, nb, num, rev, flg, M, limit);
+    if (!d) return false;
+    for (const c of d.mines) flg[c] = 1;
+    for (const c of d.safe) open(c);
+  }
+  return true;
+}
+
+function randomBoard(W, H, M, s) {
+  const N = W * H, sx = s % W, sy = (s / W) | 0, p = [];
+  for (let i = 0; i < N; i++) {
+    const x = i % W, y = (i / W) | 0;
+    if (Math.abs(x - sx) <= 1 && Math.abs(y - sy) <= 1) continue;
+    p.push(i);
+  }
+  const mine = new Uint8Array(N);
+  for (let k = 0; k < M; k++) {
+    const j = k + Math.floor(Math.random() * (p.length - k));
+    const t = p[k]; p[k] = p[j]; p[j] = t;
+    mine[p[k]] = 1;
+  }
+  return mine;
+}
+
+(() => {
+const LEVELS = { easy:{w:9,h:9,m:10,name:'Easy'}, medium:{w:16,h:16,m:40,name:'Medium'}, hard:{w:30,h:16,m:99,name:'Hard'} };
+const FLAG = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3v15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 3.5l9 3.8-9 3.8z" fill="var(--flag)"/></svg>';
+const MINE = '<svg viewBox="0 0 20 20" aria-hidden="true"><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 2.5v15M2.5 10h15M4.7 4.7l10.6 10.6M15.3 4.7L4.7 15.3"/></g><circle cx="10" cy="10" r="5.2" fill="currentColor"/><circle cx="8.3" cy="8.3" r="1.4" fill="var(--open)"/></svg>';
+const $ = s => document.querySelector(s);
+const boardEl = $('#board'), statusEl = $('#status'), leftEl = $('#left'), timeEl = $('#time');
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+let level = store.get('ngms-level', 'easy'); if (!LEVELS[level]) level = 'easy';
+let flagMode = false, G = null, cells = [], hintTimer = null;
+
+function dims(){
+  const L = LEVELS[level];
+  if (level === 'hard' && window.innerWidth < 760) return { w:L.h, h:L.w, m:L.m };
+  return { w:L.w, h:L.h, m:L.m };
+}
+const fmt = s => Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+function setStatus(t){ statusEl.textContent = t; }
+
+function newGame(){
+  if (G) clearInterval(G.timer);
+  const d = dims(), N = d.w*d.h;
+  G = { W:d.w, H:d.h, M:d.m, N, nb:neighbors(d.w,d.h), mine:null, num:null,
+        rev:new Uint8Array(N), flg:new Uint8Array(N), revN:0, flgN:0,
+        status:'ready', t0:0, timer:null, hints:0, level };
+  document.querySelectorAll('.levels button').forEach(b => b.setAttribute('aria-pressed', b.dataset.level === level));
+  build(); counters(); timeEl.textContent = '0:00';
+  $('#hint').disabled = true;
+  setStatus('Open any tile to start. Your first click always opens a clear area.');
+  showBest();
+}
+
+function build(){
+  boardEl.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  cells = [];
+  for (let i = 0; i < G.N; i++){
+    const b = document.createElement('button');
+    b.className = 'cell'; b.dataset.i = i; b.tabIndex = i === 0 ? 0 : -1;
+    b.setAttribute('role','gridcell');
+    cells.push(b); frag.appendChild(b); label(i, 'hidden');
+  }
+  boardEl.appendChild(frag);
+  size();
+}
+function label(i, t){ cells[i].setAttribute('aria-label', `Row ${Math.floor(i/G.W)+1}, column ${i%G.W+1}, ${t}`); }
+
+function size(){
+  const avail = Math.min(document.documentElement.clientWidth, 1200) - 24 - 24;
+  let s = Math.floor((avail - 2*(G.W-1)) / G.W);
+  s = Math.max(20, Math.min(38, s));
+  boardEl.style.setProperty('--s', s + 'px');
+  boardEl.style.gridTemplateColumns = `repeat(${G.W}, var(--s))`;
+}
+
+function paint(i){
+  const el = cells[i];
+  if (G.rev[i]){
+    const n = G.num[i];
+    el.className = 'cell open' + (n ? ' n'+n : '');
+    el.textContent = n || '';
+    label(i, n ? String(n) : 'empty');
+  } else if (G.flg[i]){
+    el.className = 'cell'; el.innerHTML = FLAG; label(i, 'flagged');
+  } else {
+    el.className = 'cell'; el.textContent = ''; label(i, 'hidden');
+  }
+}
+function counters(){ leftEl.textContent = G.M - G.flgN; }
+function tick(){ timeEl.textContent = fmt(Math.floor((performance.now() - G.t0)/1000)); }
+
+function generate(g, s){
+  return new Promise(res => {
+    let tries = 0;
+    const step = () => {
+      if (G !== g) return res(null);
+      const end = performance.now() + 30;
+      while (performance.now() < end){
+        tries++;
+        const m = randomBoard(g.W, g.H, g.M, s);
+        if (solve(g.W, g.H, g.M, m, s, g.nb, 20000) || tries > 20000) return res(m);
+      }
+      setTimeout(step, 0);
+    };
+    step();
+  });
+}
+
+async function start(g, i){
+  g.status = 'generating'; boardEl.classList.add('busy');
+  setStatus('Building a board you can solve without guessing…');
+  const m = await generate(g, i);
+  if (G !== g || !m) return;
+  g.mine = m; g.num = counts(m, g.nb, g.N);
+  g.status = 'playing'; g.t0 = performance.now(); g.timer = setInterval(tick, 250);
+  boardEl.classList.remove('busy'); $('#hint').disabled = false; setStatus('');
+}
+
+function openFrom(i, fresh){
+  if (G.rev[i] || G.flg[i]) return true;
+  if (G.mine[i]) return false;
+  const st = [i];
+  while (st.length){
+    const c = st.pop();
+    if (G.rev[c] || G.flg[c]) continue;
+    G.rev[c] = 1; G.revN++; fresh.push(c);
+    if (G.num[c] === 0) for (const n of G.nb[c]) if (!G.rev[n] && !G.flg[n]) st.push(n);
+  }
+  return true;
+}
+
+async function act(i, wantFlag){
+  const g = G;
+  if (g.status === 'won' || g.status === 'lost' || g.status === 'generating') return;
+  clearHint();
+  if (wantFlag){
+    if (g.status !== 'playing' || g.rev[i]) return;
+    g.flg[i] ^= 1; g.flgN += g.flg[i] ? 1 : -1; paint(i); counters(); return;
+  }
+  if (g.status === 'ready'){ await start(g, i); if (G !== g || g.status !== 'playing') return; }
+  if (g.flg[i]) return;
+  const fresh = [];
+  if (g.rev[i]){
+    const n = g.num[i]; if (!n) return;
+    let f = 0; for (const x of g.nb[i]) f += g.flg[x];
+    if (f !== n) return;
+    for (const x of g.nb[i]) if (!g.rev[x] && !g.flg[x] && !openFrom(x, fresh)) return lose(x);
+  } else if (!openFrom(i, fresh)) return lose(i);
+  const anim = !matchMedia('(prefers-reduced-motion: reduce)').matches && fresh.length < 400;
+  for (const c of fresh){ paint(c); if (anim) cells[c].classList.add('pop'); }
+  if (g.revN === g.N - g.M) win();
+}
+
+function stop(){ clearInterval(G.timer); boardEl.classList.remove('busy'); $('#hint').disabled = true; }
+
+function lose(hit){
+  stop(); G.status = 'lost';
+  for (let i = 0; i < G.N; i++){
+    if (G.mine[i] && !G.flg[i]){ const el = cells[i]; el.className = 'cell open mine' + (i === hit ? ' boom' : ''); el.innerHTML = MINE; label(i, 'mine'); }
+    else if (G.flg[i] && !G.mine[i]){ cells[i].classList.add('wrong'); label(i, 'wrong flag'); }
+    else paint(i);
+  }
+  setStatus('That was a mine. There was a sure move somewhere on the board. Try a new game.');
+}
+
+function win(){
+  stop(); G.status = 'won';
+  const secs = Math.floor((performance.now() - G.t0)/1000);
+  timeEl.textContent = fmt(secs);
+  for (let i = 0; i < G.N; i++) if (G.mine[i] && !G.flg[i]){ G.flg[i] = 1; G.flgN++; paint(i); }
+  counters();
+  let msg = `Cleared in ${fmt(secs)}.`;
+  if (G.hints){ msg += ` You used ${G.hints} hint${G.hints>1?'s':''}, so this time isn't counted as a best.`; }
+  else {
+    const best = store.get('ngms-best', {});
+    if (best[G.level] == null || secs < best[G.level]){ best[G.level] = secs; store.set('ngms-best', best); msg += ' New best time!'; }
+  }
+  setStatus(msg); showBest();
+}
+
+function showBest(){
+  const best = store.get('ngms-best', {});
+  $('#best').innerHTML = Object.keys(LEVELS).map(k => `<span>${LEVELS[k].name} best: <b>${best[k] != null ? fmt(best[k]) : 'none yet'}</b></span>`).join('');
+}
+
+function clearHint(){ clearTimeout(hintTimer); cells.forEach(c => c.classList.remove('hint','hint-mine')); }
+function hint(){
+  if (G.status !== 'playing') return;
+  clearHint();
+  const known = new Uint8Array(G.N);
+  for (let it = 0; it < 200; it++){
+    const d = deduce(G.N, G.nb, G.num, G.rev, known, G.M, 300000);
+    if (!d) break;
+    if (d.safe.size){
+      const pick = [...d.safe].find(c => G.flg[c]) ?? [...d.safe].find(c => G.nb[c].some(n => G.rev[n])) ?? [...d.safe][0];
+      return showHint(pick, false, G.flg[pick]);
+    }
+    const m = [...d.mines].find(c => !G.flg[c]);
+    if (m != null) return showHint(m, true);
+    d.mines.forEach(c => known[c] = 1);
+  }
+  setStatus('No certain move found from here.');
+}
+function showHint(i, isMine, wrongFlag){
+  G.hints++;
+  cells[i].classList.add('hint'); if (isMine) cells[i].classList.add('hint-mine');
+  focusCell(i);
+  setStatus(wrongFlag ? 'This flag is on a safe tile. Remove it and open the tile.' : isMine ? 'The highlighted tile is certainly a mine. Flag it.' : 'The highlighted tile is certainly safe to open.');
+  hintTimer = setTimeout(() => cells[i] && cells[i].classList.remove('hint','hint-mine'), 4000);
+}
+function focusCell(i){ cells.forEach(c => c.tabIndex = -1); cells[i].tabIndex = 0; cells[i].focus({preventScroll:false}); }
+
+// Input
+let lpTimer = null, lpFired = false, lpStart = null, lastType = 'mouse';
+const cellOf = e => e.target.closest && e.target.closest('.cell');
+boardEl.addEventListener('pointerdown', e => {
+  lastType = e.pointerType; const c = cellOf(e); if (!c) return;
+  if (e.pointerType === 'touch'){
+    lpFired = false; lpStart = [e.clientX, e.clientY]; clearTimeout(lpTimer);
+    lpTimer = setTimeout(() => { lpFired = true; if (navigator.vibrate) navigator.vibrate(12); act(+c.dataset.i, !flagMode); }, 380);
+  }
+});
+boardEl.addEventListener('pointermove', e => { if (lpStart && Math.hypot(e.clientX-lpStart[0], e.clientY-lpStart[1]) > 10){ clearTimeout(lpTimer); lpStart = null; } });
+['pointerup','pointercancel','pointerleave'].forEach(t => boardEl.addEventListener(t, () => { clearTimeout(lpTimer); lpStart = null; }));
+boardEl.addEventListener('click', e => {
+  const c = cellOf(e); if (!c) return;
+  if (lpFired){ lpFired = false; return; }
+  const i = +c.dataset.i;
+  cells.forEach(x => x.tabIndex = -1); c.tabIndex = 0;
+  act(i, flagMode && !G.rev[i]);
+});
+boardEl.addEventListener('contextmenu', e => {
+  e.preventDefault(); const c = cellOf(e); if (!c || lastType === 'touch') return;
+  act(+c.dataset.i, true);
+});
+boardEl.addEventListener('mousedown', e => { if (e.button === 1){ e.preventDefault(); const c = cellOf(e); if (c) act(+c.dataset.i, false); } });
+boardEl.addEventListener('keydown', e => {
+  const c = cellOf(e); if (!c) return; const i = +c.dataset.i;
+  const x = i % G.W, y = Math.floor(i / G.W);
+  const mv = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] }[e.key];
+  if (mv){
+    e.preventDefault();
+    const nx = Math.max(0, Math.min(G.W-1, x+mv[0])), ny = Math.max(0, Math.min(G.H-1, y+mv[1]));
+    focusCell(ny*G.W + nx);
+  } else if (e.key === 'f' || e.key === 'F'){ e.preventDefault(); act(i, true); }
+});
+
+document.querySelectorAll('.levels button').forEach(b => b.addEventListener('click', () => { level = b.dataset.level; store.set('ngms-level', level); newGame(); }));
+$('#new').addEventListener('click', newGame);
+$('#hint').addEventListener('click', hint);
+$('#flagmode').addEventListener('click', e => { flagMode = !flagMode; e.currentTarget.setAttribute('aria-pressed', flagMode); });
+
+let lastNarrow = window.innerWidth < 760;
+window.addEventListener('resize', () => {
+  const narrow = window.innerWidth < 760;
+  if (level === 'hard' && narrow !== lastNarrow && G.status === 'ready'){ lastNarrow = narrow; newGame(); return; }
+  lastNarrow = narrow; size();
+});
+
+newGame();
+})();
+</script>
+</body>
+</html>

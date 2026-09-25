@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tents and Trees</title>
+<link rel="stylesheet" href="tents-and-trees.css">
+</head>
+<body>
+
+<h1>Tents and Trees</h1>
+
+<div>
+  Size:
+  <button class="btn" id="s6" onclick="setSize(6)">6</button>
+  <button class="btn" id="s8" onclick="setSize(8)">8</button>
+  <button class="btn" id="s10" onclick="setSize(10)">10</button>
+</div>
+<div>
+  Tap places:
+  <button class="btn" id="m1" onclick="setMode(1)">&#9650; Tent</button>
+  <button class="btn" id="m2" onclick="setMode(2)">&middot; Grass</button>
+  <button class="btn" id="m0" onclick="setMode(0)">Erase</button>
+</div>
+
+<div id="board"></div>
+<p id="status"></p>
+
+<div>
+  <button class="btn" onclick="doUndo()">Undo</button>
+  <button class="btn" onclick="clearBoard()">Clear</button>
+  <button class="btn" onclick="newGame()">New puzzle</button>
+</div>
+
+<p>Put one tent (&#9650;) beside each tree (&#9827;): above, below, left or right. Tents never touch each other, not even diagonally. The numbers show how many tents go in each row and column. Every puzzle has exactly one solution.</p>
+<p>Tap a square to place the chosen mark; tap it again to remove it. Tap a row or column number to fill its empty squares with grass. Black squares show a problem.</p>
+
+<script>
+var N = 8, tree, sol, rows, cols, st, mode = 1, done = false, undoStack = [];
+
+function orth(i) {
+  var r = Math.floor(i / N), c = i % N, o = [];
+  if (r > 0) o.push(i - N);
+  if (r < N - 1) o.push(i + N);
+  if (c > 0) o.push(i - 1);
+  if (c < N - 1) o.push(i + 1);
+  return o;
+}
+function ring(i) {
+  var r = Math.floor(i / N), c = i % N, o = [], dr, dc, rr, cc;
+  for (dr = -1; dr <= 1; dr++) for (dc = -1; dc <= 1; dc++) {
+    if (dr === 0 && dc === 0) continue;
+    rr = r + dr; cc = c + dc;
+    if (rr >= 0 && rr < N && cc >= 0 && cc < N) o.push(rr * N + cc);
+  }
+  return o;
+}
+function zeros(n) { var a = [], i; for (i = 0; i < n; i++) a.push(0); return a; }
+function shuffled(n) {
+  var a = [], i, j, t;
+  for (i = 0; i < n; i++) a.push(i);
+  for (i = n - 1; i > 0; i--) { j = Math.floor(Math.random() * (i + 1)); t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+function anyTent(list, arr) {
+  for (var k = 0; k < list.length; k++) if (arr[list[k]] === 1) return true;
+  return false;
+}
+
+// Each tree must get its own adjacent tent (bipartite matching).
+function hasMatching(tent) {
+  var trees = [], tents = 0, i, match = {};
+  for (i = 0; i < N * N; i++) { if (tree[i]) trees.push(i); if (tent[i]) tents++; }
+  if (trees.length !== tents) return false;
+  function tryTree(t, seen) {
+    var o = orth(t), k, x;
+    for (k = 0; k < o.length; k++) {
+      x = o[k];
+      if (!tent[x] || seen[x]) continue;
+      seen[x] = true;
+      if (match[x] === undefined || tryTree(match[x], seen)) { match[x] = t; return true; }
+    }
+    return false;
+  }
+  for (i = 0; i < trees.length; i++) if (!tryTree(trees[i], {})) return false;
+  return true;
+}
+
+function countSolutions(limit) {
+  var isCand = zeros(N * N), i, r, c, k;
+  for (i = 0; i < N * N; i++) {
+    if (tree[i]) continue;
+    var o = orth(i);
+    for (k = 0; k < o.length; k++) if (tree[o[k]]) isCand[i] = 1;
+  }
+  var rowRem = [], colRem = [];
+  for (r = 0; r < N; r++) { rowRem[r] = zeros(N + 1); for (c = N - 1; c >= 0; c--) rowRem[r][c] = rowRem[r][c + 1] + isCand[r * N + c]; }
+  for (c = 0; c < N; c++) { colRem[c] = zeros(N + 1); for (r = N - 1; r >= 0; r--) colRem[c][r] = colRem[c][r + 1] + isCand[r * N + c]; }
+  var tent = zeros(N * N), colC = zeros(N), sols = 0, nodes = 0, found = null;
+
+  function treesFed(r) {
+    for (var c = 0; c < N; c++) {
+      var i = r * N + c;
+      if (tree[i] && !anyTent(orth(i), tent)) return false;
+    }
+    return true;
+  }
+  function rec(i, rowC) {
+    if (sols >= limit) return;
+    nodes++;
+    if (nodes > 300000) { sols = limit; return; }
+    var r = Math.floor(i / N), c = i % N, k;
+    if (c === 0 && r > 0) {
+      if (rowC !== rows[r - 1]) return;
+      if (r >= 2 && !treesFed(r - 2)) return;
+      rowC = 0;
+    }
+    if (i === N * N) {
+      if (!treesFed(N - 2) || !treesFed(N - 1)) return;
+      for (k = 0; k < N; k++) if (colC[k] !== cols[k]) return;
+      if (!hasMatching(tent)) return;
+      sols++; found = tent.slice(); return;
+    }
+    if (isCand[i] && rowC < rows[r] && colC[c] < cols[c] &&
+        !(c > 0 && tent[i - 1]) &&
+        !(r > 0 && (tent[i - N] || (c > 0 && tent[i - N - 1]) || (c < N - 1 && tent[i - N + 1])))) {
+      tent[i] = 1; colC[c]++;
+      rec(i + 1, rowC + 1);
+      tent[i] = 0; colC[c]--;
+    }
+    if (colC[c] + colRem[c][r + 1] >= cols[c] && rowC + rowRem[r][c + 1] >= rows[r]) rec(i + 1, rowC);
+  }
+  rec(0, 0);
+  return sols;
+}
+
+function generate() {
+  var attempt, i, k, m, order, count, target, tent, opts, o;
+  for (attempt = 0; attempt < 500; attempt++) {
+    tent = zeros(N * N); tree = zeros(N * N);
+    target = Math.round(N * N * (0.17 + Math.random() * 0.04));
+    order = shuffled(N * N); count = 0;
+    for (k = 0; k < order.length && count < target; k++) {
+      i = order[k];
+      if (anyTent(ring(i), tent)) continue;
+      tent[i] = 1; count++;
+    }
+    order = shuffled(N * N);
+    for (k = 0; k < order.length; k++) {
+      i = order[k];
+      if (!tent[i]) continue;
+      o = orth(i); opts = [];
+      for (m = 0; m < o.length; m++) if (!tent[o[m]] && !tree[o[m]]) opts.push(o[m]);
+      if (opts.length === 0) { tent[i] = 0; continue; }
+      tree[opts[Math.floor(Math.random() * opts.length)]] = 1;
+    }
+    rows = zeros(N); cols = zeros(N);
+    for (i = 0; i < N * N; i++) if (tent[i]) { rows[Math.floor(i / N)]++; cols[i % N]++; }
+    if (countSolutions(2) === 1) { sol = tent; return; }
+  }
+  sol = tent;
+}
+
+// ---------- game ----------
+function el(id) { return document.getElementById(id); }
+
+function newGame() {
+  generate();
+  st = zeros(N * N);
+  undoStack = []; done = false;
+  drawBoard();
+  update();
+}
+
+function drawBoard() {
+  var w = window.innerWidth || document.documentElement.clientWidth || 600;
+  if (w > 700) w = 700;
+  var px = Math.floor((w - 30) / (N + 1));
+  if (px > 60) px = 60;
+  var fs = Math.floor(px * 0.6);
+  var dim = ' style="width:' + px + 'px;height:' + px + 'px;font-size:' + fs + 'px"';
+  var h = '<table class="b"><tr><td class="corner"' + dim + '></td>';
+  var r, c, i;
+  for (c = 0; c < N; c++) h += '<td class="clue" id="k' + c + '"' + dim + ' onclick="fillLine(1,' + c + ')">' + cols[c] + '</td>';
+  h += '</tr>';
+  for (r = 0; r < N; r++) {
+    h += '<tr><td class="clue" id="r' + r + '"' + dim + ' onclick="fillLine(0,' + r + ')">' + rows[r] + '</td>';
+    for (c = 0; c < N; c++) {
+      i = r * N + c;
+      if (tree[i]) h += '<td class="tree"' + dim + '>&#9827;</td>';
+      else h += '<td id="c' + i + '"' + dim + ' onclick="tap(' + i + ')"></td>';
+    }
+    h += '</tr>';
+  }
+  h += '</table>';
+  el('board').innerHTML = h;
+}
+
+function isBad(i) {
+  if (st[i] !== 1) return false;
+  if (anyTent(ring(i), st)) return true;
+  var o = orth(i);
+  for (var k = 0; k < o.length; k++) if (tree[o[k]]) return false;
+  return true;
+}
+
+function update() {
+  var i, k, m, x, y, a, b, ea, eb, placed = 0, total = 0, cell, cls, txt;
+  for (i = 0; i < N * N; i++) {
+    if (tree[i]) continue;
+    cell = el('c' + i);
+    cls = ''; txt = '';
+    if (st[i] === 1) { txt = '&#9650;'; if (isBad(i)) cls = 'err'; }
+    else if (st[i] === 2) { txt = '&middot;'; cls = 'grass'; }
+    if (cell.className !== cls) cell.className = cls;
+    if (cell.getAttribute('data-s') !== String(st[i]) || cls === 'err') { cell.innerHTML = txt; cell.setAttribute('data-s', String(st[i])); }
+  }
+  for (k = 0; k < N; k++) {
+    a = 0; b = 0; ea = 0; eb = 0;
+    for (m = 0; m < N; m++) {
+      x = k * N + m; y = m * N + k;
+      if (st[x] === 1) a++; else if (st[x] === 0 && !tree[x]) ea++;
+      if (st[y] === 1) b++; else if (st[y] === 0 && !tree[y]) eb++;
+    }
+    placed += a; total += rows[k];
+    el('r' + k).className = 'clue' + ((a > rows[k] || a + ea < rows[k]) ? ' over' : (a === rows[k] ? ' done' : ''));
+    el('k' + k).className = 'clue' + ((b > cols[k] || b + eb < cols[k]) ? ' over' : (b === cols[k] ? ' done' : ''));
+  }
+  for (i = 0; i < N * N; i++) if ((st[i] === 1) !== (sol[i] === 1)) {
+    el('status').innerHTML = 'Tents left to place: ' + (total - placed);
+    return;
+  }
+  done = true;
+  for (i = 0; i < N * N; i++) if (!tree[i] && st[i] === 0) {
+    st[i] = 2; el('c' + i).className = 'grass'; el('c' + i).innerHTML = '&middot;';
+  }
+  el('status').innerHTML = 'Solved! Every tree has its tent.';
+}
+
+function tap(i) {
+  if (done) return;
+  var v = (st[i] === mode) ? 0 : mode;
+  if (v === st[i]) return;
+  undoStack.push([[i, st[i]]]);
+  st[i] = v;
+  update();
+}
+
+function fillLine(isCol, n) {
+  if (done) return;
+  var batch = [], m, i;
+  for (m = 0; m < N; m++) {
+    i = isCol ? m * N + n : n * N + m;
+    if (!tree[i] && st[i] === 0) { batch.push([i, 0]); st[i] = 2; }
+  }
+  if (batch.length) { undoStack.push(batch); update(); }
+}
+
+function doUndo() {
+  if (done || undoStack.length === 0) return;
+  var b = undoStack.pop();
+  for (var k = b.length - 1; k >= 0; k--) st[b[k][0]] = b[k][1];
+  update();
+}
+
+function clearBoard() {
+  if (done) return;
+  var batch = [];
+  for (var i = 0; i < N * N; i++) if (st[i] !== 0) { batch.push([i, st[i]]); st[i] = 0; }
+  if (batch.length) { undoStack.push(batch); update(); }
+}
+
+function setMode(m) {
+  mode = m;
+  el('m0').className = 'btn' + (m === 0 ? ' on' : '');
+  el('m1').className = 'btn' + (m === 1 ? ' on' : '');
+  el('m2').className = 'btn' + (m === 2 ? ' on' : '');
+}
+
+function setSize(n) {
+  N = n;
+  el('s6').className = 'btn' + (n === 6 ? ' on' : '');
+  el('s8').className = 'btn' + (n === 8 ? ' on' : '');
+  el('s10').className = 'btn' + (n === 10 ? ' on' : '');
+  newGame();
+}
+
+setMode(1);
+setSize(8);
+</script>
+</body>
+</html>
