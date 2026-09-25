@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Farm &amp; Mine</title>
+<link rel="stylesheet" href="farm.css">
+</head>
+<body>
+<p class="top"><a href="../index.html">&larr; Menu</a></p>
+<h1>Farm &amp; Mine</h1>
+
+<div id="hud"></div>
+<div id="map"></div>
+<p id="msg"></p>
+
+<div class="row">
+  <button onclick="move(-1)">&larr;</button>
+  <button onclick="buildUp()">&uarr; Build up</button>
+  <button onclick="digDown()">&darr; Dig down</button>
+  <button onclick="move(1)">&rarr;</button>
+</div>
+<div class="row" id="tools"></div>
+<div class="row">
+  <button onclick="sleep()">Sleep (next day)</button>
+</div>
+
+<div id="inv"></div>
+<div id="shop"></div>
+
+<div class="help">
+  <h2>How to play</h2>
+  <p>Pick a tool, then tap a square near you (up to 2 away). Tap a tool again to switch what it uses.</p>
+  <p><b>Pick</b> digs blocks. <b>Build</b> places blocks. <b>Plant</b> puts seeds on top of dirt or grass. Tap a ripe crop to harvest it.</p>
+  <p>Crops grow each time you sleep. Sleeping also refills your energy. Mining costs energy; farming is free.</p>
+  <p>Walk to the <b>$</b> shop to sell what you gather and buy seeds and better pickaxes. Save up $3000 for the golden trophy.</p>
+  <p class="legend">@ you &nbsp; $ shop &nbsp; B bed &nbsp; " grass &nbsp; . dirt &nbsp; # stone &nbsp; | wood &nbsp; c coal &nbsp; i iron &nbsp; g gold &nbsp; * gem &nbsp; X bedrock<br>
+  , seed &nbsp; v growing &nbsp; W wheat &nbsp; C carrot &nbsp; P pumpkin (ready)</p>
+  <p><button onclick="newGame(true)">Start a new world</button></p>
+</div>
+
+<script>
+var W = 60, H = 30, VW = 15, VH = 13;
+var SX = 28, SY = 7, BX = 32;
+var AIR = 0, GRASS = 1, DIRT = 2, STONE = 3, COAL = 4, IRON = 5, GOLD = 6, GEM = 7, BEDROCK = 8, WOOD = 9, SHOP = 10, BED = 11;
+var T = [
+  { n: 'air', ch: '' },
+  { n: 'grass', ch: '"', drop: 'dirt', cost: 1, tier: 1 },
+  { n: 'dirt', ch: '.', drop: 'dirt', cost: 1, tier: 1 },
+  { n: 'stone', ch: '#', drop: 'stone', cost: 2, tier: 1 },
+  { n: 'coal', ch: 'c', drop: 'coal', cost: 2, tier: 1 },
+  { n: 'iron', ch: 'i', drop: 'iron', cost: 2, tier: 2 },
+  { n: 'gold', ch: 'g', drop: 'gold', cost: 3, tier: 2 },
+  { n: 'gem', ch: '*', drop: 'gem', cost: 3, tier: 3 },
+  { n: 'bedrock', ch: 'X' },
+  { n: 'wood', ch: '|', drop: 'wood', cost: 1, tier: 1 },
+  { n: 'shop', ch: '$' },
+  { n: 'bed', ch: 'B' }
+];
+var CROPS = {
+  wheat: { days: 2, min: 1, max: 3, ch: 'W' },
+  carrot: { days: 3, min: 1, max: 2, ch: 'C' },
+  pumpkin: { days: 5, min: 1, max: 2, ch: 'P' }
+};
+var SELL = { dirt: 1, stone: 1, wood: 3, coal: 6, iron: 15, gold: 40, gem: 120, wheat: 6, carrot: 14, pumpkin: 35 };
+var NAMES = {
+  dirt: 'Dirt', stone: 'Stone', wood: 'Wood', coal: 'Coal', iron: 'Iron', gold: 'Gold', gem: 'Gem',
+  wheat: 'Wheat', carrot: 'Carrot', pumpkin: 'Pumpkin',
+  wheatSeed: 'Wheat seeds', carrotSeed: 'Carrot seeds', pumpkinSeed: 'Pumpkin seeds', fert: 'Fertilizer'
+};
+var PLANT = ['wheat', 'carrot', 'pumpkin', 'fert'];
+var BUILD = ['dirt', 'stone', 'wood'];
+var BUILD_TILE = { dirt: DIRT, stone: STONE, wood: WOOD };
+var PICKS = ['', 'Basic pickaxe', 'Iron pickaxe', 'Diamond pickaxe'];
+
+var g = null;
+var msg = '';
+
+function rnd(n) { return Math.floor(Math.random() * n); }
+function key(x, y) { return x + ',' + y; }
+function inside(x, y) { return x >= 0 && x < W && y >= 0 && y < H; }
+function get(x, y) { return inside(x, y) ? g.world[y][x] : BEDROCK; }
+function solid(t) { return t >= GRASS && t <= WOOD; }
+function open(x, y) { return inside(x, y) && !solid(g.world[y][x]); }
+function count(id) { return g.inv[id] || 0; }
+function add(id, n) { g.inv[id] = count(id) + n; }
+
+function newGame(ask) {
+  if (ask && !confirm('Start a new world? Your current world will be lost.')) return;
+  var world = [], x, y, h = 8, surf = [];
+  for (y = 0; y < H; y++) { world.push([]); for (x = 0; x < W; x++) world[y].push(AIR); }
+  for (x = 0; x < W; x++) {
+    var r = Math.random();
+    if (r < 0.25) h--; else if (r > 0.75) h++;
+    if (h < 6) h = 6; if (h > 10) h = 10;
+    if (x >= 25 && x <= 35) h = 8;
+    surf.push(h);
+    for (y = h; y < H; y++) {
+      var d = y - h;
+      if (y == H - 1) world[y][x] = BEDROCK;
+      else if (d == 0) world[y][x] = GRASS;
+      else if (d <= 3) world[y][x] = DIRT;
+      else {
+        var o = Math.random();
+        if (d >= 16 && o < 0.02) world[y][x] = GEM;
+        else if (d >= 10 && o < 0.045) world[y][x] = GOLD;
+        else if (d >= 6 && o < 0.1) world[y][x] = IRON;
+        else if (o < 0.16) world[y][x] = COAL;
+        else world[y][x] = STONE;
+      }
+    }
+  }
+  for (x = 2; x < W - 2; x++) {
+    if (x >= 24 && x <= 36) continue;
+    if (Math.random() < 0.12 && world[surf[x] - 1][x - 1] != WOOD) {
+      var th = 2 + rnd(2);
+      for (y = 1; y <= th; y++) world[surf[x] - y][x] = WOOD;
+    }
+  }
+  world[SY][SX] = SHOP;
+  world[SY][BX] = BED;
+  g = {
+    world: world, crops: {}, px: 30, py: 7,
+    money: 10, day: 1, energy: 20, maxE: 20, pick: 1,
+    inv: { wheatSeed: 5 }, tool: 'plant', plantSel: 0, buildSel: 0, won: false
+  };
+  msg = 'Welcome! Plant your wheat seeds on the grass, then sleep to make them grow.';
+  draw();
+}
+
+function fall() {
+  while (open(g.px, g.py + 1)) g.py++;
+}
+
+function move(d) {
+  var nx = g.px + d;
+  if (!inside(nx, g.py)) { msg = 'That is the edge of the world.'; }
+  else if (open(nx, g.py)) { g.px = nx; msg = ''; }
+  else if (open(nx, g.py - 1) && open(g.px, g.py - 1)) { g.px = nx; g.py--; msg = ''; }
+  else { msg = 'Blocked. Dig through it or build up.'; }
+  fall();
+  draw();
+}
+
+function buildUp() {
+  var id = BUILD[g.buildSel];
+  if (count(id) < 1) { msg = 'You need ' + NAMES[id] + ' to build up. Tap Build to switch blocks.'; }
+  else if (!open(g.px, g.py - 1)) { msg = 'No room above you.'; }
+  else if (g.crops[key(g.px, g.py)]) { msg = 'Step off the crop first.'; }
+  else if (get(g.px, g.py) != AIR) { msg = 'You cannot build here.'; }
+  else {
+    g.world[g.py][g.px] = BUILD_TILE[id];
+    add(id, -1);
+    g.py--;
+    msg = 'You climbed up on a ' + NAMES[id].toLowerCase() + ' block.';
+  }
+  draw();
+}
+
+function digDown() {
+  digAt(g.px, g.py + 1);
+  draw();
+}
+
+function digAt(x, y) {
+  var t = get(x, y);
+  if (!inside(x, y) || !solid(t)) { msg = 'Nothing to dig there.'; return; }
+  if (t == BEDROCK) { msg = 'Bedrock is too hard to dig.'; return; }
+  var info = T[t];
+  if (info.tier > g.pick) { msg = 'You need a ' + PICKS[info.tier].toLowerCase() + ' for ' + info.n + '.'; return; }
+  if (g.energy < info.cost) { msg = 'Too tired. Sleep to get your energy back.'; return; }
+  g.energy -= info.cost;
+  g.world[y][x] = AIR;
+  add(info.drop, 1);
+  msg = '+1 ' + NAMES[info.drop] + '.';
+  var above = key(x, y - 1);
+  if (g.crops[above]) { delete g.crops[above]; msg += ' The crop on top was lost.'; }
+  fall();
+}
+
+function tap(x, y) {
+  if (x == g.px && y == g.py) { msg = 'That is you.'; draw(); return; }
+  if (Math.abs(x - g.px) > 2 || Math.abs(y - g.py) > 2) { msg = 'Too far away. Move closer.'; draw(); return; }
+  var k = key(x, y), c = g.crops[k], t = get(x, y);
+  if (c) {
+    var info = CROPS[c.type];
+    if (c.age >= info.days) {
+      var n = info.min + rnd(info.max - info.min + 1);
+      add(c.type, n);
+      delete g.crops[k];
+      msg = 'Harvested ' + n + ' ' + NAMES[c.type].toLowerCase() + '.';
+      if (Math.random() < 0.5) { add(c.type + 'Seed', 1); msg += ' Found a seed too.'; }
+    } else if (g.tool == 'plant' && PLANT[g.plantSel] == 'fert' && count('fert') > 0) {
+      add('fert', -1);
+      c.age++;
+      msg = 'Fertilized. It grew a little.';
+    } else {
+      var left = info.days - c.age;
+      msg = NAMES[c.type] + ' needs ' + left + ' more night' + (left == 1 ? '' : 's') + '.';
+    }
+    draw(); return;
+  }
+  if (t == SHOP) { msg = 'The shop is open. Look below the buttons.'; draw(); return; }
+  if (t == BED) { sleep(); return; }
+  if (g.tool == 'pick') {
+    digAt(x, y);
+  } else if (g.tool == 'build') {
+    var id = BUILD[g.buildSel];
+    if (t != AIR) msg = 'Something is already there.';
+    else if (count(id) < 1) msg = 'You have no ' + NAMES[id].toLowerCase() + '.';
+    else { g.world[y][x] = BUILD_TILE[id]; add(id, -1); msg = 'Placed ' + NAMES[id].toLowerCase() + '.'; }
+  } else {
+    var p = PLANT[g.plantSel];
+    var below = get(x, y + 1);
+    if (p == 'fert') msg = 'Tap a growing crop to use fertilizer.';
+    else if (t != AIR) msg = 'Seeds go in an empty square.';
+    else if (below != GRASS && below != DIRT) msg = 'Seeds need dirt or grass under them.';
+    else if (count(p + 'Seed') < 1) msg = 'You have no ' + NAMES[p + 'Seed'].toLowerCase() + '. Buy some at the shop.';
+    else { add(p + 'Seed', -1); g.crops[k] = { type: p, age: 0 }; msg = 'Planted ' + NAMES[p].toLowerCase() + '.'; }
+  }
+  draw();
+}
+
+function sleep() {
+  g.day++;
+  g.energy = g.maxE;
+  var grew = 0;
+  for (var k in g.crops) {
+    if (!g.crops.hasOwnProperty(k)) continue;
+    var parts = k.split(','), b = get(parseInt(parts[0], 10), parseInt(parts[1], 10) + 1);
+    if (b == GRASS || b == DIRT) { g.crops[k].age++; grew++; }
+  }
+  msg = 'Good morning! Day ' + g.day + '. Energy is full.' + (grew ? ' Your crops grew.' : '');
+  draw();
+}
+
+function setTool(t) {
+  if (g.tool == t) {
+    if (t == 'plant') g.plantSel = (g.plantSel + 1) % PLANT.length;
+    if (t == 'build') g.buildSel = (g.buildSel + 1) % BUILD.length;
+  }
+  g.tool = t;
+  msg = '';
+  draw();
+}
+
+function nearShop() { return Math.abs(g.px - SX) <= 2 && Math.abs(g.py - SY) <= 1; }
+
+function buyList() {
+  var list = [
+    { id: 'wheatSeed', label: 'Wheat seeds (2 nights)', price: 3 },
+    { id: 'carrotSeed', label: 'Carrot seeds (3 nights)', price: 8 },
+    { id: 'pumpkinSeed', label: 'Pumpkin seeds (5 nights)', price: 20 },
+    { id: 'fert', label: 'Fertilizer (grows a crop 1 night)', price: 6 }
+  ];
+  if (g.pick < 2) list.push({ id: 'pick2', label: 'Iron pickaxe (mines iron and gold)', price: 120 });
+  else if (g.pick < 3) list.push({ id: 'pick3', label: 'Diamond pickaxe (mines gems)', price: 500 });
+  if (g.maxE < 50) list.push({ id: 'lunch', label: 'Bigger lunchbox (+10 max energy)', price: 100 * ((g.maxE - 20) / 10 + 1) });
+  if (!g.won) list.push({ id: 'trophy', label: 'Golden trophy (win the game)', price: 3000 });
+  return list;
+}
+
+function buy(id) {
+  var list = buyList(), item = null;
+  for (var i = 0; i < list.length; i++) if (list[i].id == id) item = list[i];
+  if (!item) return;
+  if (g.money < item.price) { msg = 'Not enough money.'; draw(); return; }
+  g.money -= item.price;
+  if (id == 'pick2') g.pick = 2;
+  else if (id == 'pick3') g.pick = 3;
+  else if (id == 'lunch') { g.maxE += 10; g.energy += 10; }
+  else if (id == 'trophy') g.won = true;
+  else add(id, 1);
+  msg = id == 'trophy' ? 'You bought the golden trophy. You win! Keep playing if you like.' : 'Bought ' + item.label.split(' (')[0].toLowerCase() + '.';
+  draw();
+}
+
+function sell(id, n) {
+  var have = count(id);
+  if (n > have) n = have;
+  if (n < 1) return;
+  add(id, -n);
+  g.money += n * SELL[id];
+  msg = 'Sold ' + n + ' ' + NAMES[id].toLowerCase() + ' for $' + (n * SELL[id]) + '.';
+  draw();
+}
+
+function cellHTML(x, y) {
+  var t = get(x, y), cls = T[t].n, ch = T[t].ch, c = g.crops[key(x, y)];
+  if (c) {
+    var info = CROPS[c.type];
+    if (c.age >= info.days) { ch = info.ch; cls = 'ripe'; }
+    else { ch = c.age == 0 ? ',' : 'v'; cls = 'crop'; }
+  }
+  if (x == g.px && y == g.py) { ch = '@'; cls = 'me'; }
+  else if (Math.abs(x - g.px) <= 2 && Math.abs(y - g.py) <= 2) cls += ' r';
+  return '<td class="' + cls + '" data-x="' + x + '" data-y="' + y + '">' + (ch === '' ? '&nbsp;' : ch) + '</td>';
+}
+
+function draw() {
+  var cx = g.px - Math.floor(VW / 2), cy = g.py - Math.floor(VH / 2);
+  if (cx < 0) cx = 0; if (cx > W - VW) cx = W - VW;
+  if (cy < 0) cy = 0; if (cy > H - VH) cy = H - VH;
+  var h = '<table class="world">', x, y;
+  for (y = cy; y < cy + VH; y++) {
+    h += '<tr>';
+    for (x = cx; x < cx + VW; x++) h += cellHTML(x, y);
+    h += '</tr>';
+  }
+  document.getElementById('map').innerHTML = h + '</table>';
+
+  document.getElementById('hud').innerHTML =
+    '<span>Day ' + g.day + '</span><span>$' + g.money + '</span><span>Energy ' + g.energy + '/' + g.maxE + '</span>' +
+    '<span>' + PICKS[g.pick] + '</span>' + (g.won ? '<span>Trophy won</span>' : '');
+  document.getElementById('msg').innerHTML = msg || '&nbsp;';
+
+  var p = PLANT[g.plantSel], b = BUILD[g.buildSel];
+  var pName = p == 'fert' ? 'Fertilizer' : NAMES[p + 'Seed'], pCount = count(p == 'fert' ? 'fert' : p + 'Seed');
+  document.getElementById('tools').innerHTML =
+    '<button class="' + (g.tool == 'pick' ? 'on' : '') + '" onclick="setTool(\'pick\')">Pick</button>' +
+    '<button class="' + (g.tool == 'build' ? 'on' : '') + '" onclick="setTool(\'build\')">Build: ' + NAMES[b] + ' (' + count(b) + ')</button>' +
+    '<button class="' + (g.tool == 'plant' ? 'on' : '') + '" onclick="setTool(\'plant\')">Plant: ' + pName + ' (' + pCount + ')</button>';
+
+  var inv = [], id;
+  for (id in NAMES) if (NAMES.hasOwnProperty(id) && count(id) > 0) inv.push(NAMES[id] + ' ' + count(id));
+  document.getElementById('inv').innerHTML = '<h2>Backpack</h2><p>' + (inv.length ? inv.join(', ') : 'Empty') + '</p>';
+
+  var s = '<h2>Shop</h2>';
+  if (!nearShop()) {
+    s += '<p>Walk to the $ on the surface to buy and sell.</p>';
+  } else {
+    var rows = '';
+    for (id in SELL) {
+      if (!SELL.hasOwnProperty(id) || count(id) < 1) continue;
+      rows += '<tr><td>' + NAMES[id] + ' x' + count(id) + '</td><td>$' + SELL[id] + ' each</td><td>' +
+        '<button onclick="sell(\'' + id + '\',1)">Sell 1</button> <button onclick="sell(\'' + id + '\',9999)">Sell all</button></td></tr>';
+    }
+    s += '<h3>Sell</h3>' + (rows ? '<table class="list">' + rows + '</table>' : '<p>Nothing to sell yet.</p>');
+    var list = buyList();
+    rows = '';
+    for (var i = 0; i < list.length; i++) {
+      rows += '<tr><td>' + list[i].label + '</td><td>$' + list[i].price + '</td><td><button ' +
+        (g.money < list[i].price ? 'disabled ' : '') + 'onclick="buy(\'' + list[i].id + '\')">Buy</button></td></tr>';
+    }
+    s += '<h3>Buy</h3><table class="list">' + rows + '</table>';
+  }
+  document.getElementById('shop').innerHTML = s;
+  save();
+}
+
+function save() {
+  try { localStorage.setItem('farmmine1', JSON.stringify(g)); } catch (e) {}
+}
+
+function load() {
+  try {
+    var s = localStorage.getItem('farmmine1');
+    if (s) { g = JSON.parse(s); if (g && g.world) { msg = 'Welcome back! Day ' + g.day + '.'; draw(); return true; } }
+  } catch (e) {}
+  return false;
+}
+
+document.getElementById('map').onclick = function (e) {
+  e = e || window.event;
+  var t = e.target || e.srcElement;
+  while (t && t.nodeName != 'TD') t = t.parentNode;
+  if (!t) return;
+  tap(parseInt(t.getAttribute('data-x'), 10), parseInt(t.getAttribute('data-y'), 10));
+};
+
+if (!load()) newGame(false);
+</script>
+</body>
+</html>

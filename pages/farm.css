@@ -1,0 +1,67 @@
+body {
+  font-family: Georgia, serif;
+  margin: 0.8em;
+  color: #000;
+  background: #fff;
+  line-height: 1.4;
+}
+h1 { font-size: 1.6em; margin: 0.2em 0; }
+h2 { font-size: 1.2em; margin: 0.8em 0 0.3em; }
+h3 { font-size: 1em; margin: 0.6em 0 0.2em; }
+a { color: #000; }
+.top { margin: 0; }
+
+#hud span {
+  display: inline-block;
+  margin-right: 1em;
+  font-weight: bold;
+}
+
+table.world {
+  border-collapse: collapse;
+  margin: 0.4em 0;
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+}
+table.world td {
+  width: 1.9em;
+  height: 1.9em;
+  text-align: center;
+  border: 1px solid #eee;
+  padding: 0;
+}
+table.world td.r { border: 1px solid #777; }
+
+td.air { background: #fff; }
+td.grass { background: #ccc; border-top: 3px solid #000; }
+td.dirt { background: #e4e4e4; }
+td.stone { background: #999; color: #fff; }
+td.coal, td.iron, td.gold { background: #999; color: #000; font-size: 1.2em; }
+td.gem { background: #000; color: #fff; font-size: 1.2em; }
+td.bedrock { background: #333; color: #333; }
+td.wood { background: #bbb; }
+td.shop, td.bed { background: #fff; font-size: 1.2em; border: 2px solid #000; }
+td.crop { background: #fff; }
+td.ripe { background: #fff; font-size: 1.2em; text-decoration: underline; }
+td.me { background: #000; color: #fff; font-size: 1.2em; }
+
+#msg { min-height: 1.4em; margin: 0.3em 0; font-style: italic; }
+
+.row { margin: 0.4em 0; }
+button {
+  font-family: Georgia, serif;
+  font-size: 1em;
+  padding: 0.45em 0.8em;
+  margin: 0.15em 0.15em 0.15em 0;
+  border: 2px solid #000;
+  background: #fff;
+  color: #000;
+}
+button.on { background: #000; color: #fff; }
+button[disabled] { border-color: #aaa; color: #aaa; }
+
+table.list { border-collapse: collapse; }
+table.list td { padding: 0.25em 0.8em 0.25em 0; border-bottom: 1px solid #ccc; }
+
+.help { margin-top: 1.5em; border-top: 2px solid #000; }
+.legend { font-family: "Courier New", monospace; font-size: 0.9em; }
