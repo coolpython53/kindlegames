@@ -19,8 +19,6 @@
   <td>Turn<br><b id="sTick">0</b></td>
 </tr></table>
 
-<div id="board"></div>
-
 <table class="tools"><tr>
   <td><button id="tG" onclick="setTool('G')">G Gun<br>$8</button></td>
   <td><button id="tC" onclick="setTool('C')">C Cannon<br>$15</button></td>
@@ -31,21 +29,31 @@
 <table class="controls"><tr>
   <td class="wide"><button id="bNext" onclick="nextOne()">Send wave 1</button></td>
   <td><button id="bFive" onclick="nextFive()">Next x5</button></td>
+  <td><button id="bRoad" onclick="expand()">Add road<br>$100</button></td>
   <td><button onclick="newGame()">New game</button></td>
 </tr></table>
 
 <div id="info"></div>
 <div id="log"></div>
 
+<div id="board"></div>
+
+<table class="controls"><tr>
+  <td class="wide"><button id="bNext2" onclick="nextOne()">Send wave 1</button></td>
+  <td><button id="bFive2" onclick="nextFive()">Next x5</button></td>
+</tr></table>
+
 <div class="help">
   <p><b>How to play.</b> Pick a tower, then tap an empty white square to build it. Tap a tower to see its range. Enemies walk the gray path from &gt; to B. Each press of Next moves the game one turn.</p>
   <p><b>Each turn:</b> bullets fly (*), then enemies step, then towers fire. Bullets start at the tower and take a turn or more to arrive, so aim ahead of the crowd.</p>
   <p><b>Towers.</b> Gun: range 2, 1 damage, fires every turn, bullet moves 1 square a turn. Cannon: range 2, 2 damage to everything within 1 square of impact, fires every 3 turns, bullet moves 2 squares a turn. Sniper: range 5, 3 damage, fires every 3 turns, bullet moves 3 squares a turn.</p>
+  <p><b>Add road.</b> Between waves, pay $100 to add a whole new section of road and ground. The base moves to the end of the new road, so enemies have farther to walk. The field grows wider twice, then grows downward (scroll to see it). Any tower standing where new road goes is removed and fully refunded.</p>
   <p><b>Enemies.</b> All enemies move 1 square a turn. Numbers show health. T = tank (extra health, costs 2 lives if it reaches the base). Bullets that chase too long (8 turns) fizzle.</p>
 </div>
 
 <script>
-var W = 11, H = 7, MAXW = 12;
+var W, H, MAXW = 12;
+var ROAD_COST = 100, MAX_WIDE = 2, hSections;
 var TYPES = {
   G: { name: 'Gun',    cost: 8,  range: 2, dmg: 1, cd: 1, speed: 1, splash: 0 },
   C: { name: 'Cannon', cost: 15, range: 2, dmg: 2, cd: 3, speed: 2, splash: 1 },
@@ -69,16 +77,80 @@ function buildPath() {
       path.push([x, y]);
     }
   }
+  indexPath();
+}
+
+function indexPath() {
   pathIdx = {};
   for (var j = 0; j < path.length; j++) pathIdx[key(path[j][0], path[j][1])] = j;
 }
 
+// Extend the road in a straight line from its current end to (tx, ty).
+// Towers in the way are removed with a full refund. Returns the refund.
+function roadTo(tx, ty) {
+  var end = path[path.length - 1], x = end[0], y = end[1], refund = 0;
+  while (x !== tx || y !== ty) {
+    x += sgn(tx - x); y += sgn(ty - y);
+    var k = key(x, y);
+    if (towers[k]) {
+      refund += TYPES[towers[k].type].cost;
+      if (selected === k) selected = null;
+      delete towers[k];
+    }
+    path.push([x, y]);
+  }
+  return refund;
+}
+
+function expand() {
+  if (over) return;
+  if (waveActive) { addLog('You can add road between waves.'); render(); return; }
+  if (money < ROAD_COST) { addLog('A road section costs $' + ROAD_COST + '. You have $' + money + '.'); render(); return; }
+  money -= ROAD_COST;
+  var end = path[path.length - 1], ex = end[0], ey = end[1], refund = 0, dir;
+  if (hSections < MAX_WIDE) {
+    // 3 new columns on the right
+    W += 3;
+    var y2 = (ey >= H / 2) ? 1 : H - 2;
+    refund += roadTo(ex + 2, ey);
+    refund += roadTo(ex + 2, y2);
+    refund += roadTo(ex + 3, y2);
+    hSections++;
+    dir = 'wider';
+  } else {
+    // 4 new rows at the bottom, road zigzags across
+    var y0 = H;
+    H += 4;
+    var x1 = (ex > W / 2) ? 1 : W - 2;
+    refund += roadTo(ex, y0 + 1);
+    refund += roadTo(x1, y0 + 1);
+    refund += roadTo(x1, y0 + 3);
+    dir = 'longer, scroll down to see it';
+  }
+  indexPath();
+  money += refund;
+  addLog('Road added: the field is now ' + dir + '.' + (refund ? ' Towers in the way refunded $' + refund + '.' : ''));
+  buildBoard();
+  render();
+}
+
+function cellSize() {
+  var avail = (document.documentElement.clientWidth || window.innerWidth || 600) - 20;
+  if (avail > 640) avail = 640;
+  var c = Math.floor(avail / W);
+  if (c > 44) c = 44;
+  if (c < 30) c = 30;
+  return c;
+}
+
 function buildBoard() {
-  var h = '<table class="grid">';
+  var c = cellSize();
+  var st = ' style="width:' + c + 'px;height:' + c + 'px"';
+  var h = '<table class="grid' + (c < 40 ? ' small' : '') + '">';
   for (var y = 0; y < H; y++) {
     h += '<tr>';
     for (var x = 0; x < W; x++) {
-      h += '<td id="c' + x + '_' + y + '" onclick="tapCell(' + x + ',' + y + ')"></td>';
+      h += '<td id="c' + x + '_' + y + '"' + st + ' onclick="tapCell(' + x + ',' + y + ')"></td>';
     }
     h += '</tr>';
   }
@@ -92,6 +164,10 @@ function addLog(m) {
 }
 
 function newGame() {
+  W = 11; H = 7; hSections = 0;
+  towers = {};
+  buildPath();
+  buildBoard();
   money = 25; lives = 10; wave = 0; waveActive = false;
   towers = {}; enemies = []; bullets = []; queue = [];
   spawnTimer = 0; tickNo = 0; tool = 'G'; selected = null;
@@ -365,15 +441,14 @@ function render() {
     document.getElementById('t' + ids[i]).className = (tool === ids[i]) ? 'on' : '';
   }
 
-  var bNext = document.getElementById('bNext');
-  var bFive = document.getElementById('bFive');
-  if (over) {
-    bNext.innerHTML = won ? 'You win!' : 'Game over';
-    bNext.disabled = true; bFive.disabled = true;
-  } else {
-    bNext.innerHTML = waveActive ? 'Next turn' : 'Send wave ' + (wave + 1);
-    bNext.disabled = false; bFive.disabled = false;
+  var label = over ? (won ? 'You win!' : 'Game over') : (waveActive ? 'Next turn' : 'Send wave ' + (wave + 1));
+  var ns = ['bNext', 'bNext2', 'bFive', 'bFive2'];
+  for (i = 0; i < ns.length; i++) {
+    var btn = document.getElementById(ns[i]);
+    if (i < 2) btn.innerHTML = label;
+    btn.disabled = over;
   }
+  document.getElementById('bRoad').disabled = over || waveActive;
 
   var info = '';
   if (selected && towers[selected]) {
@@ -390,8 +465,6 @@ function render() {
   document.getElementById('log').innerHTML = logs.join('<br>');
 }
 
-buildPath();
-buildBoard();
 newGame();
 </script>
 </body>

@@ -3,7 +3,7 @@ body {
   color: #000;
   background: #fff;
   margin: 8px;
-  max-width: 600px;
+  max-width: 660px;
 }
 h1 { font-size: 26px; margin: 4px 0 8px 0; }
 .back { margin: 0; font-size: 16px; }
@@ -40,10 +40,15 @@ table { border-collapse: collapse; }
 .grid td.bullet { font-size: 22px; }
 .grid td.base { font-size: 22px; background: #fff; border: 3px double #000; }
 .grid small { font-size: 14px; }
+.grid.small td { font-size: 13px; }
+.grid.small td.tower, .grid.small td.bullet, .grid.small td.base { font-size: 18px; }
+.grid.small td.enemy { font-size: 12px; }
+.grid.small small { font-size: 11px; }
 
 .tools, .controls { width: 100%; margin-top: 8px; }
 .tools td, .controls td { padding: 3px; width: 25%; }
-.controls td.wide { width: 40%; }
+.controls td.wide { width: 34%; }
+#board { margin-top: 8px; overflow-x: auto; }
 
 button {
   width: 100%;
