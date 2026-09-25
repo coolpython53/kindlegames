@@ -40,16 +40,16 @@
 <div class="help">
   <p><b>How to play.</b> Pick a tower, then tap an empty white square to build it. Tap a tower to see its range. Enemies walk the gray path from &gt; to B. Each press of Next moves the game one turn.</p>
   <p><b>Each turn:</b> bullets fly (*), then enemies step, then towers fire. Bullets start at the tower and take a turn or more to arrive, so aim ahead of the crowd.</p>
-  <p><b>Towers.</b> Gun: range 2, 1 damage, fires every turn, bullet speed 2. Cannon: range 2, 2 damage to everything within 1 square of impact, fires every 3 turns, bullet speed 1. Sniper: range 5, 4 damage, fires every 3 turns, bullet speed 3.</p>
-  <p><b>Enemies.</b> Numbers show health. f = fast (1.5 squares a turn). T = tank (half speed, costs 2 lives). Bullets that chase too long (8 turns) fizzle.</p>
+  <p><b>Towers.</b> Gun: range 2, 1 damage, fires every turn, bullet moves 1 square a turn. Cannon: range 2, 2 damage to everything within 1 square of impact, fires every 3 turns, bullet moves 2 squares a turn. Sniper: range 5, 3 damage, fires every 3 turns, bullet moves 3 squares a turn.</p>
+  <p><b>Enemies.</b> All enemies move 1 square a turn. Numbers show health. T = tank (extra health, costs 2 lives if it reaches the base). Bullets that chase too long (8 turns) fizzle.</p>
 </div>
 
 <script>
 var W = 11, H = 7, MAXW = 12;
 var TYPES = {
-  G: { name: 'Gun',    cost: 8,  range: 2, dmg: 1, cd: 1, speed: 2, splash: 0 },
-  C: { name: 'Cannon', cost: 15, range: 2, dmg: 2, cd: 3, speed: 1, splash: 1 },
-  S: { name: 'Sniper', cost: 20, range: 5, dmg: 4, cd: 3, speed: 3, splash: 0 }
+  G: { name: 'Gun',    cost: 8,  range: 2, dmg: 1, cd: 1, speed: 1, splash: 0 },
+  C: { name: 'Cannon', cost: 15, range: 2, dmg: 2, cd: 3, speed: 2, splash: 1 },
+  S: { name: 'Sniper', cost: 20, range: 5, dmg: 3, cd: 3, speed: 3, splash: 0 }
 };
 var WAYPOINTS = [[0,1],[8,1],[8,3],[2,3],[2,5],[10,5]];
 
@@ -104,7 +104,6 @@ function makeWave(w) {
   var q = [], n = 4 + w;
   for (var i = 0; i < n; i++) {
     var t = 'n';
-    if (w >= 4 && i % 3 === 1) t = 'f';
     if (w % 3 === 0 && i % 4 === 3) t = 't';
     q.push(t);
   }
@@ -125,8 +124,7 @@ function spawn() {
   var t = queue.shift();
   var e = { id: nextId++, type: t, pos: 0, acc: 0, alive: true };
   var bonus = Math.floor(wave / 4);
-  if (t === 'f') { e.hp = 1 + wave; e.speed = 1.5; e.reward = 2 + bonus; }
-  else if (t === 't') { e.hp = 8 + 3 * wave; e.speed = 0.5; e.reward = 4 + bonus; }
+  if (t === 't') { e.hp = 8 + 3 * wave; e.speed = 1; e.reward = 4 + bonus; }
   else { e.hp = 2 + wave; e.speed = 1; e.reward = 1 + bonus; }
   enemies.push(e);
   spawnTimer = 1;
@@ -345,7 +343,7 @@ function render() {
         if (k === selected) cls += ' sel';
       } else if (em[k]) {
         var t = em[k].top;
-        txt = (t.type === 'f' ? 'f' : (t.type === 't' ? 'T' : '')) + t.hp + (em[k].n > 1 ? '+' : '');
+        txt = (t.type === 't' ? 'T' : '') + t.hp + (em[k].n > 1 ? '+' : '');
         if (bulletMark) txt += '<small>*</small>';
         cls += ' enemy';
       } else if (bulletMark) {
