@@ -1,0 +1,7 @@
+body{margin:0;padding:14px;background:#fff;color:#000;font-family:Georgia,serif}
+h1{font-size:30px;margin:0 0 4px 0}
+.intro{font-size:18px;margin:0 0 14px 0}
+.menu{border-top:2px solid #000}
+.item{display:block;padding:16px 8px;border-bottom:2px solid #000;color:#000;text-decoration:none}
+.title{display:block;font-size:22px;font-weight:bold}
+.desc{display:block;font-size:17px;margin-top:4px}

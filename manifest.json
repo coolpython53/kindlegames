@@ -1,0 +1,18 @@
+{
+  "title": "My Pages",
+  "intro": "Pick a page.",
+  "pages": [
+    {
+      "title": "Tents and Trees",
+      "description": "Place a tent beside every tree. A logic puzzle.",
+      "html": "pages/tents-and-trees.html",
+      "css": "pages/tents-and-trees.css"
+    },
+    {
+      "title": "Minesweeper",
+      "description": "Literally just minesweeper.",
+      "html": "pages/minesweep.html",
+      "css": "pages/minesweep.css"
+    }
+  ]
+}
