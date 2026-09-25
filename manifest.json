@@ -19,6 +19,12 @@
       "description": "A farming game",
       "html": "pages/farm.html",
       "css": "pages/farm.css"
+    },
+    {
+      "title": "Tile Defense",
+      "description": "Tower defense on tiles.",
+      "html": "pages/tiledefense.html",
+      "css": "pages/tiledefense.css"
     }
   ]
 }
