@@ -29,6 +29,7 @@
 <table class="controls"><tr>
   <td class="wide"><button id="bNext" onclick="nextOne()">Send wave 1</button></td>
   <td><button id="bFive" onclick="nextFive()">Next x5</button></td>
+  <td><button id="bAuto" onclick="toggleAuto()">Auto</button></td>
   <td><button id="bRoad" onclick="expand()">Add road<br>$100</button></td>
   <td><button onclick="newGame()">New game</button></td>
 </tr></table>
@@ -41,10 +42,11 @@
 <table class="controls"><tr>
   <td class="wide"><button id="bNext2" onclick="nextOne()">Send wave 1</button></td>
   <td><button id="bFive2" onclick="nextFive()">Next x5</button></td>
+  <td><button id="bAuto2" onclick="toggleAuto()">Auto</button></td>
 </tr></table>
 
 <div class="help">
-  <p><b>How to play.</b> Waves never end: survive as long as you can. Pick a tower, then tap an empty white square to build it. Tap a tower to see its range. Enemies walk the gray path from &gt; to B. Each press of Next moves the game one turn.</p>
+  <p><b>How to play.</b> Waves never end: survive as long as you can. Pick a tower, then tap an empty white square to build it. Tap a tower to see its range. Enemies walk the gray path from &gt; to B. Each press of Next moves the game one turn. Auto plays a turn every half second until the wave is cleared (press Stop to pause).</p>
   <p><b>Each turn:</b> bullets fly (*), then enemies step, then towers fire. Bullets start at the tower and take a turn or more to arrive, so aim ahead of the crowd.</p>
   <p><b>Towers.</b> Gun: range 2, 1 damage, fires every turn, bullet moves 1 square a turn. Cannon: range 2, 2 damage to everything within 1 square of impact, fires every 3 turns, bullet moves 2 squares a turn. Sniper: range 5, 3 damage, fires every 3 turns, bullet moves 3 squares a turn. Every tower you own makes the next one cost more (+25% of its base price per tower). Selling gives back half of what you paid.</p>
   <p><b>Add road.</b> Between waves, pay $100 to add a whole new section of road and ground. The base moves to the end of the new road, so enemies have farther to walk. The field grows wider twice, then grows downward (scroll to see it). Any tower standing where new road goes is removed and fully refunded.</p>
@@ -53,7 +55,7 @@
 
 <script>
 var W, H;
-var PRICE_STEP = 0.15; // each tower you own adds 25% of a tower's base price
+var PRICE_STEP = 0.25; // each tower you own adds 25% of a tower's base price
 var ROAD_COST = 100, MAX_WIDE = 2, hSections;
 var TYPES = {
   G: { name: 'Gun',    cost: 8,  range: 2, dmg: 1, cd: 1, speed: 1, splash: 0 },
@@ -177,6 +179,7 @@ function addLog(m) {
 }
 
 function newGame() {
+  stopAuto();
   W = 11; H = 7; hSections = 0;
   towers = {};
   buildPath();
@@ -350,6 +353,25 @@ function nextFive() {
   render();
 }
 
+// Auto play: one turn every half second, pauses when a wave is cleared.
+var AUTO_MS = 500, autoTimer = null;
+
+function stopAuto() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+}
+
+function autoStep() {
+  if (!tick()) stopAuto();
+  render();
+}
+
+function toggleAuto() {
+  if (autoTimer) { stopAuto(); render(); return; }
+  if (over) return;
+  autoTimer = setInterval(autoStep, AUTO_MS);
+  autoStep();
+}
+
 function setTool(t) { tool = t; selected = null; render(); }
 
 function tapCell(x, y) {
@@ -459,6 +481,13 @@ function render() {
     var btn = document.getElementById(ns[i]);
     if (i < 2) btn.innerHTML = label;
     btn.disabled = over;
+  }
+  var autoIds = ['bAuto', 'bAuto2'];
+  for (i = 0; i < autoIds.length; i++) {
+    var ab = document.getElementById(autoIds[i]);
+    ab.innerHTML = autoTimer ? 'Stop' : 'Auto';
+    ab.className = autoTimer ? 'on' : '';
+    ab.disabled = over;
   }
   document.getElementById('bRoad').disabled = over || waveActive;
 

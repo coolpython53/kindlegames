@@ -46,8 +46,8 @@ table { border-collapse: collapse; }
 .grid.small small { font-size: 11px; }
 
 .tools, .controls { width: 100%; margin-top: 8px; }
-.tools td, .controls td { padding: 3px; width: 25%; }
-.controls td.wide { width: 34%; }
+.tools td, .controls td { padding: 3px; width: 20%; }
+.controls td.wide { width: 28%; }
 #board { margin-top: 8px; overflow-x: auto; }
 
 button {
