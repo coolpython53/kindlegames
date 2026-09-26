@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infinite Minesweeper</title>
+<link rel="stylesheet" href="infinite-minesweeper.css">
+</head>
+<body>
+
+<div id="top">
+  <a href="../index.html" class="back">Menu</a>
+  <span class="title">Infinite Minesweeper</span>
+</div>
+
+<table id="bar"><tr>
+  <td>Cleared: <b id="score">0</b></td>
+  <td>Best: <b id="best">0</b></td>
+  <td>At: <b id="pos">0, 0</b></td>
+</tr></table>
+
+<table id="modes"><tr>
+  <td><button id="modeDig" class="on" onclick="setMode('dig')">Dig</button></td>
+  <td><button id="modeFlag" onclick="setMode('flag')">Flag</button></td>
+</tr></table>
+
+<div id="msg"></div>
+
+<table id="board"></table>
+
+<table id="pad">
+  <tr><td></td><td><button onclick="pan(0,-1)">Up</button></td><td></td></tr>
+  <tr>
+    <td><button onclick="pan(-1,0)">Left</button></td>
+    <td><button onclick="goHome()">Start</button></td>
+    <td><button onclick="pan(1,0)">Right</button></td>
+  </tr>
+  <tr><td></td><td><button onclick="pan(0,1)">Down</button></td><td></td></tr>
+</table>
+
+<div id="newgame">
+  New game:
+  <button onclick="newGame(12)">Easy</button>
+  <button onclick="newGame(16)">Normal</button>
+  <button onclick="newGame(20)">Hard</button>
+</div>
+
+<p class="help">The field never ends. Use the arrows to move. Tap a number that has all its flags placed to open the cells around it.</p>
+
+<script>
+/* Plain ES5, all synchronous, for the Kindle browser. */
+
+var SAVE_KEY = 'infMines1';
+var BEST_KEY = 'infMinesBest';
+var CELL = 42;          /* must match td size in the CSS */
+var MAX_FLOOD = 4000;   /* safety cap on one flood fill */
+
+var cols = 10, rows = 12;
+var seed, density;      /* density = percent of cells that are mines */
+var open, flags;        /* maps "x,y" -> number / true */
+var viewX, viewY;       /* top-left cell of the view */
+var alive, hitKey, mode = 'dig';
+var cleared = 0, best = 0;
+
+/* ---------- deterministic mines ---------- */
+
+function imul(a, b) {
+  var ah = (a >>> 16) & 0xffff, al = a & 0xffff;
+  var bh = (b >>> 16) & 0xffff, bl = b & 0xffff;
+  return ((al * bl) + (((ah * bl + al * bh) << 16) >>> 0)) | 0;
+}
+
+function hash(x, y) {
+  var h = seed | 0;
+  h = imul(h ^ (x | 0), 0x9E3779B1);
+  h = imul(h ^ (y | 0), 0x85EBCA77);
+  h = h ^ (h >>> 15);
+  h = imul(h, 0xC2B2AE3D);
+  h = h ^ (h >>> 13);
+  return h >>> 0;
+}
+
+function isMine(x, y) {
+  if (x >= -1 && x <= 1 && y >= -1 && y <= 1) return false; /* safe start */
+  return (hash(x, y) % 100) < density;
+}
+
+function countAround(x, y) {
+  var n = 0, dx, dy;
+  for (dx = -1; dx <= 1; dx++)
+    for (dy = -1; dy <= 1; dy++)
+      if ((dx || dy) && isMine(x + dx, y + dy)) n++;
+  return n;
+}
+
+function key(x, y) { return x + ',' + y; }
+
+/* ---------- saving ---------- */
+
+function save() {
+  var o = [], f = [], k;
+  for (k in open) if (open.hasOwnProperty(k)) o.push(k);
+  for (k in flags) if (flags.hasOwnProperty(k)) f.push(k);
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      s: seed, d: density, o: o, f: f, vx: viewX, vy: viewY, a: alive, h: hitKey
+    }));
+    localStorage.setItem(BEST_KEY, String(best));
+  } catch (e) {}
+}
+
+function load() {
+  var raw = null, data, i, p;
+  try { best = parseInt(localStorage.getItem(BEST_KEY), 10) || 0; } catch (e) { best = 0; }
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) {}
+  if (!raw) return false;
+  try { data = JSON.parse(raw); } catch (e) { return false; }
+  seed = data.s; density = data.d;
+  viewX = data.vx; viewY = data.vy;
+  alive = data.a; hitKey = data.h || null;
+  open = {}; flags = {}; cleared = 0;
+  for (i = 0; i < data.o.length; i++) {
+    p = data.o[i].split(',');
+    open[data.o[i]] = countAround(+p[0], +p[1]);
+    cleared++;
+  }
+  for (i = 0; i < data.f.length; i++) flags[data.f[i]] = true;
+  return true;
+}
+
+/* ---------- game ---------- */
+
+function newGame(d) {
+  seed = Math.floor(Math.random() * 2147483647);
+  density = d;
+  open = {}; flags = {};
+  alive = true; hitKey = null; cleared = 0;
+  centerOn(0, 0);
+  dig(0, 0);
+  setMode('dig');
+  save();
+  draw();
+}
+
+function centerOn(x, y) {
+  viewX = x - Math.floor(cols / 2);
+  viewY = y - Math.floor(rows / 2);
+}
+
+function dig(x, y) {
+  var k = key(x, y);
+  if (open.hasOwnProperty(k) || flags[k]) return;
+  if (isMine(x, y)) {
+    alive = false; hitKey = k;
+    return;
+  }
+  var stack = [x, y], done = 0, cx, cy, ck, n, dx, dy, nk;
+  while (stack.length && done < MAX_FLOOD) {
+    cy = stack.pop(); cx = stack.pop();
+    ck = key(cx, cy);
+    if (open.hasOwnProperty(ck) || flags[ck]) continue;
+    n = countAround(cx, cy);
+    open[ck] = n; cleared++; done++;
+    if (n === 0) {
+      for (dx = -1; dx <= 1; dx++)
+        for (dy = -1; dy <= 1; dy++) {
+          if (!dx && !dy) continue;
+          nk = key(cx + dx, cy + dy);
+          if (!open.hasOwnProperty(nk) && !flags[nk]) stack.push(cx + dx, cy + dy);
+        }
+    }
+  }
+}
+
+function chord(x, y) {
+  var n = open[key(x, y)], f = 0, dx, dy;
+  for (dx = -1; dx <= 1; dx++)
+    for (dy = -1; dy <= 1; dy++)
+      if ((dx || dy) && flags[key(x + dx, y + dy)]) f++;
+  if (f !== n) return;
+  for (dx = -1; dx <= 1; dx++)
+    for (dy = -1; dy <= 1; dy++)
+      if ((dx || dy) && alive) dig(x + dx, y + dy);
+}
+
+function tap(x, y) {
+  if (!alive) return;
+  var k = key(x, y);
+  if (open.hasOwnProperty(k)) {
+    if (open[k] > 0) chord(x, y);
+  } else if (mode === 'flag') {
+    if (flags[k]) delete flags[k]; else flags[k] = true;
+  } else {
+    dig(x, y);
+  }
+  if (cleared > best) best = cleared;
+  save();
+  draw();
+}
+
+/* ---------- controls ---------- */
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeDig').className = (m === 'dig') ? 'on' : '';
+  document.getElementById('modeFlag').className = (m === 'flag') ? 'on' : '';
+}
+
+function pan(dx, dy) {
+  viewX += dx * Math.max(1, Math.floor(cols / 2));
+  viewY += dy * Math.max(1, Math.floor(rows / 2));
+  save();
+  draw();
+}
+
+function goHome() {
+  centerOn(0, 0);
+  save();
+  draw();
+}
+
+/* ---------- drawing ---------- */
+
+function draw() {
+  var html = [], x, y, k, cls, txt, mine;
+  for (y = viewY; y < viewY + rows; y++) {
+    html.push('<tr>');
+    for (x = viewX; x < viewX + cols; x++) {
+      k = key(x, y);
+      cls = 'c'; txt = '';
+      if (open.hasOwnProperty(k)) {
+        cls += ' o';
+        if (open[k] > 0) { txt = open[k]; cls += ' n' + open[k]; }
+      } else if (!alive) {
+        mine = isMine(x, y);
+        if (k === hitKey) { cls += ' hit'; txt = '*'; }
+        else if (flags[k] && !mine) { cls += ' bad'; txt = 'X'; }
+        else if (flags[k]) { cls += ' f'; txt = 'F'; }
+        else if (mine) { cls += ' m'; txt = '*'; }
+      } else if (flags[k]) {
+        cls += ' f'; txt = 'F';
+      }
+      if (x === 0 && y === 0) cls += ' home';
+      html.push('<td class="' + cls + '" data-x="' + x + '" data-y="' + y + '">' + txt + '</td>');
+    }
+    html.push('</tr>');
+  }
+  document.getElementById('board').innerHTML = html.join('');
+  document.getElementById('score').innerHTML = cleared;
+  document.getElementById('best').innerHTML = best;
+  document.getElementById('pos').innerHTML =
+    (viewX + Math.floor(cols / 2)) + ', ' + (-(viewY + Math.floor(rows / 2)));
+  document.getElementById('msg').innerHTML = alive ? '' :
+    'You hit a mine after clearing ' + cleared + ' cells. Pick a level below to play again.';
+  document.getElementById('msg').className = alive ? '' : 'show';
+}
+
+function fitBoard() {
+  var w = window.innerWidth || document.documentElement.clientWidth || 600;
+  var h = window.innerHeight || document.documentElement.clientHeight || 800;
+  cols = Math.floor((w - 16) / CELL);
+  rows = Math.floor((h - 330) / CELL);
+  if (cols < 7) cols = 7; if (cols > 20) cols = 20;
+  if (rows < 7) rows = 7; if (rows > 22) rows = 22;
+}
+
+document.getElementById('board').onclick = function (e) {
+  e = e || window.event;
+  var t = e.target || e.srcElement;
+  if (!t || t.tagName !== 'TD') return;
+  tap(parseInt(t.getAttribute('data-x'), 10), parseInt(t.getAttribute('data-y'), 10));
+};
+
+fitBoard();
+if (load()) { draw(); } else { newGame(16); }
+</script>
+</body>
+</html>

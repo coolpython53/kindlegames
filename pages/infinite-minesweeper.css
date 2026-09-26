@@ -1,0 +1,78 @@
+/* High contrast, no motion, no flexbox/grid: built for e-ink. */
+
+body {
+  margin: 8px;
+  background: #fff;
+  color: #000;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+}
+
+#top { margin-bottom: 6px; }
+.back { color: #000; margin-right: 12px; }
+.title { font-size: 22px; font-weight: bold; }
+
+#bar, #modes, #pad { border-collapse: collapse; margin: 4px auto; }
+#bar td { padding: 2px 10px; }
+
+button {
+  font-family: inherit;
+  font-size: 18px;
+  padding: 8px 14px;
+  background: #fff;
+  color: #000;
+  border: 2px solid #000;
+}
+button.on { background: #000; color: #fff; }
+
+#modes td, #pad td { padding: 3px; text-align: center; }
+#modes button { width: 110px; }
+#pad button { width: 90px; }
+
+#msg { display: none; }
+#msg.show {
+  display: block;
+  margin: 6px auto;
+  padding: 8px;
+  border: 3px solid #000;
+  text-align: center;
+  font-weight: bold;
+}
+
+#board {
+  border-collapse: collapse;
+  margin: 6px auto;
+  border: 3px solid #000;
+}
+
+/* Cell size must match CELL in the script (40px + 2px border). */
+td.c {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #000;
+  background: #bbb;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 22px;
+  font-weight: bold;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+td.o { background: #fff; }
+td.home { border: 3px double #000; }
+
+/* Bigger numbers look heavier so they read at a glance. */
+td.n1 { color: #666; }
+td.n2 { color: #444; }
+td.n3, td.n4, td.n5, td.n6, td.n7, td.n8 { color: #000; text-decoration: underline; }
+
+td.f   { background: #555; color: #fff; }
+td.m   { background: #ddd; }
+td.bad { background: #ddd; text-decoration: line-through; }
+td.hit { background: #000; color: #fff; }
+
+#newgame { text-align: center; margin: 10px 0 4px; }
+#newgame button { margin: 3px; }
+
+.help { font-size: 15px; text-align: center; margin: 8px auto; max-width: 34em; }
