@@ -25,6 +25,12 @@
       "description": "Tower defense on tiles.",
       "html": "pages/tiledefense.html",
       "css": "pages/tiledefense.css"
+    },
+    {
+      "title": "Infinite Minesweeper",
+      "description": "Minesweeper, but infinite.",
+      "html": "pages/infinite-minesweeper.html",
+      "css": "pages/infinite-minesweeper.css"
     }
   ]
 }
