@@ -354,7 +354,7 @@ function nextFive() {
 }
 
 // Auto play: one turn every half second, pauses when a wave is cleared.
-var AUTO_MS = 500, autoTimer = null;
+var AUTO_MS = 1500, autoTimer = null;
 
 function stopAuto() {
   if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
