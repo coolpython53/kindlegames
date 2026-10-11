@@ -19,7 +19,7 @@
     <li><b>Two-letter codes are monsters</b>, like <code>RT</code> Rat, <code>GB</code> Goblin, <code>TR</code> Troll. A few have three, like <code>SC2</code> Scorpion. A code on a black square is a boss. A code with a double border is a champion, which carries treasure.</li>
     <li><code>&gt;</code> stairs down, <code>E</code> elevator.</li>
     <li><code>$</code> gold, <code>!</code> potion, <code>?</code> scroll, <code>*</code> treasure chest, <code>&amp;</code> merchant.</li>
-    <li><code>&amp;</code> merchant, <code>+</code> shrine, <code>"</code> relic (a free perk), <code>{</code> enchanting table, <code>p</code> pet.</li>
+    <li><code>&amp;</code> merchant, <code>+</code> shrine, <code>"</code> relic (a free perk), <code>{</code> enchanting table, <code>p</code> pet, <code>T</code> your turret.</li>
     <li>Floor dangers: <code>~</code> lava, <code>^</code> spikes, <code>:</code> poison gas, <code>#</code> shock floor. These hurt when you step on them.</li>
     <li>Other floors: <code>%</code> mushroom (heals you), <code>=</code> water, web, mud or sand (slows you), <code>-</code> ice (you slide), <code>O</code> portal (jumps you to the other portal).</li>
     <li><code>x</code> with a dotted border: a bomb or falling rock lands there next turn. Step off it!</li>
@@ -77,6 +77,10 @@
   <p>When you find a pet, the game tells you if it's a <b>GOOD ADDITION</b> or a <b>BAD ADDITION</b> to your team, and why. You can have up to <b>5 pets</b> on your team. Only team pets help you in the dungeon. Every pet you find is kept in your collection at camp, so you never lose one. Finding a pet you already have makes it level up, up to level 5 (about 3 in 10 pets you find are ones you already have).</p>
   <p>Some pets fight: they bite, blast, zap or freeze monsters every few turns. Others protect you (blocking hits, saving you from defeat, teleporting you to safety), heal you, let you see farther or show hidden monsters, or bring more gold and better loot. Each pet's card says what it does in the pet book, and "In this game" says exactly what it does here. At camp, <b>Manage pets</b> lets you change your team.</p>
 
+  <h3>Turrets</h3>
+  <p>Buy turrets in the <b>Turret shop</b> at camp. There are 10,000 of them in 10 kinds: ballistas and cannons shoot, flamers burn, frost spires freeze, tesla coils zap several monsters at once, venom spitters poison, mortars hit everything around them, beacons fire beams that ignore armor, mending totems heal you and ward stones block a hit. Every turret also has a trait, like Rapid, Twin or Leeching. Turret damage is a share of your attack, so turrets get stronger as you do.</p>
+  <p>Put up to <b>10</b> turrets in your <b>kit</b>. During a run, tap <b>Turrets</b> to set one up on a square next to you (this uses your turn). <code>T</code> on the map is your turret. Monsters can't hurt turrets, but nobody can walk through them. Walk into a turret to pick it back up. Each kit turret can be set up once per floor, and you get them all back on the next floor. Turrets you buy are yours forever, even after you ascend.</p>
+
   <h3>Bounties</h3>
   <p>Every floor has a bounty, shown under the messages, like "Defeat 2 Goblins", "Open a treasure chest" or "Reach the stairs within 30 turns". Finish it for extra gold, and sometimes a scroll.</p>
 
@@ -104,7 +108,7 @@
     <li><b>Collection</b> shows how many of the 100 monsters, 300 weapons, 20 modifiers and 50 kinds of floors you've found, and how many of the 10,000 unique floors you've visited.</li>
     <li><b>Weapon shop</b>: 5,000 weapons you can buy with gold. Weapons you buy are yours forever, even after you ascend. Equip one and it's your starting weapon on every run, until you buy or pick a different one. Tap <b>Best I can afford</b> to jump to the strongest one you can buy. You can upgrade every weapon you own up to <b>level 5</b>: each level gives +25% attack and costs more gold.</li>
     <li><b>Armor shop</b>: 1,000 armors that work just like the weapon shop. Armor you buy is yours forever. Equip one and it's your starting armor on every run, until you buy or pick a different one.</li>
-    <li><b>Achievements</b>: there are 1,008 of them, and they never run out. Tap <b>Achievements</b> at camp to see them in sections: Monster Hunting, Monster Traits, Weapons, Gear, Floors and Zones, Floor Dangers, Pets, Classes, Perks and Levels, Items and Places, Combat, Bounties, Bosses and Adventure. Every achievement has endless levels. After level V, each new level needs twice as much, and every level pays more gold. New levels are paid when you get back to camp.</li>
+    <li><b>Achievements</b>: there are 1,010 of them, and they never run out. Tap <b>Achievements</b> at camp to see them in sections: Monster Hunting, Monster Traits, Weapons, Gear, Floors and Zones, Floor Dangers, Pets, Classes, Perks and Levels, Items and Places, Combat, Bounties, Bosses and Adventure. Every achievement has endless levels. After level V, each new level needs twice as much, and every level pays more gold. New levels are paid when you get back to camp.</li>
     <li><b>Ascend</b>: when you get stuck, you can start over from floor 1 with your gold, upgrades and deepest floor reset. In return you earn stars (1 for every 5 floors past floor 20 on your deepest-ever floor). Each star gives +10% attack, HP and gold forever, so every time you ascend you can go deeper than before. Saved perks, achievements and your collection stay.</li>
   </ul>
 
@@ -412,6 +416,8 @@ var ACH = [
   { id: 'chests',   n: 'Chest Opener',    what: 'chests opened',      base: 3 },
   { id: 'champs',   n: 'Champion Slayer', what: 'champions defeated', base: 2 },
   { id: 'bosses',   n: 'Boss Hunter',     what: 'bosses defeated',    base: 1 },
+  { id: 'tplace',   n: 'Engineer',        what: 'turrets set up',     base: 10 },
+  { id: 'tkills',   n: 'Turret Master',   what: 'monsters defeated by turrets', base: 10 },
   { id: 'deep',     n: 'Deep Diver',      what: 'deepest floor',      lin: 10 }
 ];
 // 1000 more achievements: [section, name, what, [levels I to V], counter, kind]
@@ -427,7 +433,7 @@ var CAPS = { crit: 50, thorns: 60, dodge: 40 };
 
 var S = null;          // everything that gets saved
 var stacked = false;   // narrow screens put the controls under the map
-var ui = { showCode: false, codeMsg: '', elev: false, bag: false, pick: 1, startAt: 1, book: '', bookTop: false, pets: false, classes: false, clsTier: 1, achs: false, achSec: 0, achPage: 0, achNote: '', wpns: false, cwTier: 1, cwPage: 0, arms: false, caTier: 1, caPage: 0 };
+var ui = { showCode: false, codeMsg: '', elev: false, bag: false, pick: 1, startAt: 1, book: '', bookTop: false, pets: false, classes: false, clsTier: 1, achs: false, achSec: 0, achPage: 0, achNote: '', wpns: false, cwTier: 1, cwPage: 0, arms: false, caTier: 1, caPage: 0, tur: false, turs: false, tTier: 1, tPage: 0 };
 
 // Size the map so the map and every control fit on one screen.
 function fitMap() {
@@ -453,7 +459,7 @@ function fitMap() {
 // ================= SAVING =================
 function freshSave() {
   return { v: VERSION, gold: 0, up: {}, perkAt: {}, best: 0, runs: 0, run: null, last: null,
-           stats: {}, ach: {}, seen: {}, stars: 0, asc: 0, peak: 0, pets: {}, team: [], cls: 0, clsOwn: { 0: 1 }, cw: {}, cwEq: -1, cwLv: {}, ca: {}, caEq: -1, fts: '', mts: '' };
+           stats: {}, ach: {}, seen: {}, stars: 0, asc: 0, peak: 0, pets: {}, team: [], cls: 0, clsOwn: { 0: 1 }, cw: {}, cwEq: -1, cwLv: {}, ca: {}, caEq: -1, fts: '', mts: '', tur: {}, tkit: [] };
 }
 function fixSave() {
   for (var i = 0; i < UPS.length; i++) if (!S.up[UPS[i].id]) S.up[UPS[i].id] = 0;
@@ -479,6 +485,10 @@ function fixSave() {
   if (!S.fts || S.fts.length !== FT_N / 4) S.fts = new Array(FT_N / 4 + 1).join('0');
   if (S.caEq === undefined || (S.caEq >= 0 && !S.ca[S.caEq])) S.caEq = -1;
   if (!S.stats.deep || S.stats.deep < S.best) S.stats.deep = S.best;
+  if (!S.tur) S.tur = {};
+  var kit = [];   // only turrets you own, each once, up to 10
+  if (S.tkit) for (var j = 0; j < S.tkit.length; j++) if (S.tur[S.tkit[j]] && kit.indexOf(S.tkit[j]) < 0 && kit.length < TUR_MAX) kit.push(S.tkit[j]);
+  S.tkit = kit;
 }
 function load() {
   try {
@@ -506,7 +516,7 @@ function save() {
 }
 function saveCode() {
   return btoa(JSON.stringify({ g: S.gold, u: S.up, b: S.best, r: S.runs, p: S.perkAt, st: S.stats,
-                               a: S.ach, sn: S.seen, s: S.stars, as: S.asc, pk: S.peak, pt: S.pets, tm: S.team, cl: S.cls, co: S.clsOwn, cw: S.cw, ce: S.cwEq, wl: S.cwLv, ca: S.ca, ae: S.caEq, ft: S.fts, mt: S.mts }));
+                               a: S.ach, sn: S.seen, s: S.stars, as: S.asc, pk: S.peak, pt: S.pets, tm: S.team, cl: S.cls, co: S.clsOwn, cw: S.cw, ce: S.cwEq, wl: S.cwLv, ca: S.ca, ae: S.caEq, ft: S.fts, mt: S.mts, tu: S.tur, tk: S.tkit }));
 }
 function loadCode() {
   var box = document.getElementById('codeIn');
@@ -520,7 +530,7 @@ function loadCode() {
     S.perkAt = d.p || {}; S.stats = d.st || {}; S.ach = d.a || {}; S.seen = d.sn || {};
     S.stars = d.s || 0; S.asc = d.as || 0; S.peak = d.pk || 0; S.pets = d.pt || {}; S.team = d.tm || []; S.cls = d.cl || 0; S.clsOwn = d.co || { 0: 1 };
     S.cw = d.cw || {}; S.cwEq = d.ce === undefined ? -1 : d.ce; S.cwLv = d.wl || {};
-    S.ca = d.ca || {}; S.caEq = d.ae === undefined ? -1 : d.ae; S.fts = d.ft || ''; S.mts = d.mt || '';
+    S.ca = d.ca || {}; S.caEq = d.ae === undefined ? -1 : d.ae; S.fts = d.ft || ''; S.mts = d.mt || ''; S.tur = d.tu || {}; S.tkit = d.tk || [];
     fixSave();
     S.run = null; S.last = null;
     ui.codeMsg = 'Save code loaded.';
@@ -1352,6 +1362,7 @@ function genFloor() {
   while (!L) L = layoutRooms();
   var map = L.map;
   r.map = map; r.mons = []; r.items = []; r.blasts = []; r.portals = [];
+  r.turs = []; r.tUsed = {}; r.turShield = false;   // turrets come back on every floor
   r.seen = blankMap(0);
   r.px = L.x; r.py = L.y;
   r.ex = L.x; r.ey = L.y;    // elevator: where you arrive on every floor
@@ -1608,7 +1619,7 @@ function startRun() {
 }
 function nextFloor(quiet) {
   var r = S.run;
-  ui.elev = false; ui.bag = false;
+  ui.elev = false; ui.bag = false; ui.tur = false;
   r.floor++;
   if (r.floor > S.best && r.cb) { r.cb = false; stat('a_Comeback Kid'); }
   if (r.floor > S.best) S.best = r.floor;
@@ -1624,7 +1635,7 @@ function nextFloor(quiet) {
 }
 function blocked() {
   var r = S.run;
-  return !r || r.panel || ui.elev || ui.bag || ui.book;
+  return !r || r.panel || ui.elev || ui.bag || ui.tur || ui.book;
 }
 function descend() {
   var r = S.run;
@@ -1659,7 +1670,7 @@ function endRun(killer) {
   S.last = { floor: r.floor, gold: r.goldRun, killer: killer, kills: r.kills, lv: r.lv };
   S.run = null;
   S.last.ach = claimAch();
-  ui.elev = false; ui.bag = false;
+  ui.elev = false; ui.bag = false; ui.tur = false;
   save(); render();
 }
 function giveUp() {
@@ -1769,7 +1780,7 @@ function onElevator() {
 }
 function openElevator() {
   if (!onElevator() || S.run.panel) return;
-  ui.bag = false; ui.elev = true; ui.pick = S.run.floor;
+  ui.bag = false; ui.tur = false; ui.elev = true; ui.pick = S.run.floor;
   render();
 }
 function pickFloor(n, abs) {
@@ -1912,14 +1923,14 @@ function canStep(x, y, m) {
     if (t === 3 || t === 7 || t === 8) return false;
   }
   if (x === r.px && y === r.py) return false;
-  return !monAt(x, y);
+  return !monAt(x, y) && !turretAt(x, y);
 }
 function dropAt(x, y, item) {
   var r = S.run, D = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
   for (var d = 0; d < D.length; d++) {
     var nx = x + D[d][0], ny = y + D[d][1];
     if (nx < 0 || ny < 0 || nx >= W || ny >= H || r.map[ny][nx] !== 0) continue;
-    if (itemAt(nx, ny) >= 0 || (nx === r.sx && ny === r.sy) || (nx === r.ex && ny === r.ey)) continue;
+    if (itemAt(nx, ny) >= 0 || turretAt(nx, ny) || (nx === r.sx && ny === r.sy) || (nx === r.ex && ny === r.ey)) continue;
     item.x = nx; item.y = ny; r.items.push(item);
     return true;
   }
@@ -1936,6 +1947,7 @@ function killMon(m) {
   r.mons.splice(idx, 1);
   achKill(m);
   var g = goldAmt(m.gold) + m.stolen;
+  if (turGold) g = Math.round(g * turGold);   // Gilded turrets
   var gx = Math.round(m.xp * (1 + cv('xp') / 100));
   r.goldRun += g; r.kills++; r.xp += gx;
   r.ks = (r.ks || 0) + 1; if (cv('killbuff')) r.kb = 3;
@@ -2008,6 +2020,7 @@ function achKill(m) {
   else if (how === 'pet') stat('petkill');
   else if (how === 'cls') stat('clskill');
   else if (how === 'thorns') stat('c_Thorny');
+  else if (how === 'turret') stat('tkills');
   if (m.kind === 'champ') stat('champkill');
   if (m.kind === 'boss') {
     statA('zb_' + ZONES[Math.floor((r.floor - 1) / 10) % ZONES.length].n);
@@ -2128,6 +2141,7 @@ function monHits(m, kind) {
   if (dg && chance(dg)) { stat('c_Dodger'); say('You dodge ' + the(m.name) + '!'); return; }
   if (r.petShield) { r.petShield = false; stat('petblock'); say('Your pet\'s shield blocks ' + the(m.name) + '\'s attack!'); return; }
   if (r.clsShield > 0) { r.clsShield--; say('Your class shield blocks ' + the(m.name) + '\'s attack!'); return; }
+  if (r.turShield) { r.turShield = false; say('Your turret\'s ward blocks ' + the(m.name) + '\'s attack!'); return; }
   if (petSum('block') && chance(Math.min(50, 4 * petSum('block')))) { stat('petblock'); say('Your pet blocks ' + the(m.name) + '\'s attack!'); return; }
   var a = monAtk(m), slam = false;
   r.wasHit = true;
@@ -2151,7 +2165,7 @@ function monHits(m, kind) {
   if (has(m, 'slowhit') && chance(25) && !slowResist()) { if (!r.slow) say('You are slowed!'); r.slow = 2; }
   if (has(m, 'push') && kind === 'archer') {
     var px = r.px + sign(r.px - m.x), py = r.py + sign(r.py - m.y);
-    if (px >= 0 && py >= 0 && px < W && py < H && r.map[py][px] !== 1 && !monAt(px, py)) {
+    if (px >= 0 && py >= 0 && px < W && py < H && r.map[py][px] !== 1 && !monAt(px, py) && !turretAt(px, py)) {
       r.px = px; r.py = py; say('The wind pushes you back!'); stepOn();
     }
   }
@@ -2240,7 +2254,7 @@ function specialMoves(m, i, dist) {
     var D = shuffle([[1, 0], [-1, 0], [0, 1], [0, -1]]), code = TYPES[m.i].trap || 3;
     for (j = 0; j < 4; j++) {
       var tx = r.px + D[j][0], ty = r.py + D[j][1];
-      if (tx < 0 || ty < 0 || tx >= W || ty >= H || r.map[ty][tx] !== 0 || itemAt(tx, ty) >= 0 || monAt(tx, ty)) continue;
+      if (tx < 0 || ty < 0 || tx >= W || ty >= H || r.map[ty][tx] !== 0 || itemAt(tx, ty) >= 0 || monAt(tx, ty) || turretAt(tx, ty)) continue;
       if ((tx === r.sx && ty === r.sy) || (tx === r.ex && ty === r.ey)) continue;
       r.map[ty][tx] = code;
       if (vis) say(The(m.name) + ' sets ' + (code === 5 ? 'a web' : 'a spike trap') + ' next to you!');
@@ -2311,7 +2325,7 @@ function monstersAct(moveOnly) {
     if (has(m, 'turret')) continue;
     if (has(m, 'pull') && dist >= 2 && dist <= 5 && (dx === 0 || dy === 0) && lineClear(m.x, m.y, r.px, r.py)) {
       var nx = m.x + sign(dx), ny = m.y + sign(dy);
-      if (r.map[ny][nx] !== 1 && !monAt(nx, ny)) { r.px = nx; r.py = ny; say(The(m.name) + ' pulls you closer!'); stepOn(); continue; }
+      if (r.map[ny][nx] !== 1 && !monAt(nx, ny) && !turretAt(nx, ny)) { r.px = nx; r.py = ny; say(The(m.name) + ' pulls you closer!'); stepOn(); continue; }
     }
     if (has(m, 'charge') && dist >= 3 && dist <= 6 && (dx === 0 || dy === 0) && lineClear(m.x, m.y, r.px, r.py)) {
       var cx = r.px - sign(dx), cy = r.py - sign(dy);
@@ -2343,7 +2357,7 @@ function stepOn() {
   else if (t === 8) { d = hazardDmg(Math.ceil(r.maxHp * 0.12)); hurt(d, 'a shock'); say('Zap! The floor shocks you for ' + d + '.'); if (r.hp > 0) stat('d_Shock Proof'); }
   else if (t === 9 && r.portals.length === 2) {
     var o = r.portals[0][0] === r.px && r.portals[0][1] === r.py ? r.portals[1] : r.portals[0];
-    if (!monAt(o[0], o[1])) { r.px = o[0]; r.py = o[1]; stat('d_Portal Jumper'); say('The portal pulls you through!'); reveal(); }
+    if (!monAt(o[0], o[1]) && !turretAt(o[0], o[1])) { r.px = o[0]; r.py = o[1]; stat('d_Portal Jumper'); say('The portal pulls you through!'); reveal(); }
   }
   pickup();
 }
@@ -2353,7 +2367,7 @@ function moveTo(nx, ny, dx, dy) {
   r.px = nx; r.py = ny; stat('a_Step Counter'); stepOn();
   while (r.map[r.py][r.px] === 6 && slid < 8 && !r.panel && r.hp > 0) {
     var tx = r.px + dx, ty = r.py + dy;
-    if (tx < 0 || ty < 0 || tx >= W || ty >= H || r.map[ty][tx] === 1 || monAt(tx, ty)) break;
+    if (tx < 0 || ty < 0 || tx >= W || ty >= H || r.map[ty][tx] === 1 || monAt(tx, ty) || turretAt(tx, ty)) break;
     r.px = tx; r.py = ty; slid++;
     stepOn();
   }
@@ -2441,6 +2455,7 @@ function passTurn() {
   blastsTick();
   if (r.hp > 0) petsAct();
   if (r.hp > 0) classAct();
+  if (r.hp > 0) turretsAct();
   if (r.hp > 0) monstersAct(false);
   if (r.hp > 0 && (r.slow > 0 || r.extraStep)) monstersAct(true);
   r.extraStep = false;
@@ -2468,7 +2483,7 @@ function passTurn() {
   if (r.hp > 0 && cv('teleport') && !r.clsTele && r.hp < r.maxHp * 0.25) {
     var cs = [], cx2, cy2;
     for (cy2 = 0; cy2 < H; cy2++) for (cx2 = 0; cx2 < W; cx2++) {
-      if (r.map[cy2][cx2] === 0 && !monAt(cx2, cy2) && itemAt(cx2, cy2) < 0 && Math.abs(cx2 - r.px) + Math.abs(cy2 - r.py) > 5) cs.push([cx2, cy2]);
+      if (r.map[cy2][cx2] === 0 && !monAt(cx2, cy2) && !turretAt(cx2, cy2) && itemAt(cx2, cy2) < 0 && Math.abs(cx2 - r.px) + Math.abs(cy2 - r.py) > 5) cs.push([cx2, cy2]);
     }
     if (cs.length) { var cp = pick(cs); r.px = cp[0]; r.py = cp[1]; r.clsTele = true; say('Your class power teleports you to safety!'); }
   }
@@ -2484,7 +2499,7 @@ function passTurn() {
   if (petHas('teleport') && !r.petTele && r.hp < r.maxHp * 0.25) {
     var spots = [], tx, ty;
     for (ty = 0; ty < H; ty++) for (tx = 0; tx < W; tx++) {
-      if (r.map[ty][tx] === 0 && !monAt(tx, ty) && itemAt(tx, ty) < 0 && Math.abs(tx - r.px) + Math.abs(ty - r.py) > 5) spots.push([tx, ty]);
+      if (r.map[ty][tx] === 0 && !monAt(tx, ty) && !turretAt(tx, ty) && itemAt(tx, ty) < 0 && Math.abs(tx - r.px) + Math.abs(ty - r.py) > 5) spots.push([tx, ty]);
     }
     if (spots.length) { var sp = pick(spots); r.px = sp[0]; r.py = sp[1]; r.petTele = true; say('Your pet teleports you to safety!'); }
   }
@@ -2514,8 +2529,9 @@ function act(dx, dy) {
   if (dx || dy) {
     var nx = r.px + dx, ny = r.py + dy;
     if (nx < 0 || ny < 0 || nx >= W || ny >= H) return;
-    var m = monAt(nx, ny);
-    if (m) {
+    var m = monAt(nx, ny), tu = turretAt(nx, ny);
+    if (tu) pickUpTurret(tu);
+    else if (m) {
       if (!m.revealed && (has(m, 'burrow') || has(m, 'disguise'))) { m.revealed = true; stat('c_Surprise!'); say('Surprise! It\'s ' + aName(m.name) + '!'); }
       attack(m);
     }
@@ -2556,7 +2572,7 @@ function drink() {
 
 function openBag() {
   if (!S.run || S.run.panel) return;
-  ui.elev = false; ui.bag = true; render();
+  ui.elev = false; ui.tur = false; ui.bag = true; render();
 }
 function scrollCount() {
   var s = S.run.scrolls;
@@ -2592,7 +2608,7 @@ function readScroll(id) {
   } else if (id === 'tele') {
     var spots = [], x, y;
     for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
-      if (r.map[y][x] === 0 && !monAt(x, y) && itemAt(x, y) < 0 && Math.abs(x - r.px) + Math.abs(y - r.py) > 5) spots.push([x, y]);
+      if (r.map[y][x] === 0 && !monAt(x, y) && !turretAt(x, y) && itemAt(x, y) < 0 && Math.abs(x - r.px) + Math.abs(y - r.py) > 5) spots.push([x, y]);
     }
     if (spots.length) {
       var s = pick(spots);
@@ -2623,7 +2639,7 @@ function findPath(tx, ty) {
       var nx = c[0] + D[d][0], ny = c[1] + D[d][1], k = nx + ',' + ny;
       if (nx < 0 || ny < 0 || nx >= W || ny >= H || k in prev) continue;
       var t = r.map[ny][nx], mm = monAt(nx, ny);
-      if (!r.seen[ny][nx] || t === 1 || (mm && !hiddenMon(mm))) continue;
+      if (!r.seen[ny][nx] || t === 1 || (mm && !hiddenMon(mm)) || turretAt(nx, ny)) continue;
       if ((harmful(t) || t === 6 || t === 9) && !(nx === tx && ny === ty)) continue;
       prev[k] = c; q.push([nx, ny]);
     }
@@ -2923,6 +2939,7 @@ function renderRun() {
         var it = itemAt(x, y);
         cls = (vis ? 'f' : 'f dim') + (TILE_CLASS[t] || '');
         if (x === r.px && y === r.py) { cls += ' p'; ch = '@'; }
+        else if (turretAt(x, y)) { ch = 'T'; cls += ' tur'; }
         else if (m && m.disguised) { ch = '$'; cls += ' it'; }
         else if (m) {
           cls += ' m' + (m.ch.length === 3 ? ' m3' : ' m2') + (m.kind === 'boss' ? ' boss' : '') +
@@ -2946,6 +2963,7 @@ function renderRun() {
   if (r.panel) side = panelHTML();
   if (!side && ui.elev && onElevator()) side = elevatorPanel();
   if (!side && ui.bag) side = bagPanel();
+  if (!side && ui.tur) side = turretPanel();
   if (!side) {
     var onStairs = r.px === r.sx && r.py === r.sy, onElev = onElevator(), sc = scrollCount();
     side = '<table class="pad">' +
@@ -2957,7 +2975,8 @@ function renderRun() {
        btn('Go down', 'descend()', onStairs ? 'main' : '', !onStairs) +
        btn('Elevator', 'openElevator()', onElev ? 'main' : '', !onElev) +
        btn('Potion (' + r.potions + ')', 'drink()', '', r.potions < 1) +
-       btn('Scrolls (' + sc + ')', 'openBag()', '', sc < 1) + '</div>';
+       btn('Scrolls (' + sc + ')', 'openBag()', '', sc < 1) +
+       btn('Turrets (' + (r.turs ? r.turs.length : 0) + '/' + S.tkit.length + ')', 'openTurrets()', '', !S.tkit.length) + '</div>';
   }
   if (stacked) h += '</td></tr><tr><td class="sidecol">' + side + '</td></tr></table>';
   else h += '</td><td class="sidecol">' + side + '</td></tr></table>';
@@ -2989,6 +3008,7 @@ function renderRun() {
        '<div><b>Armor:</b> ' + (r.arm ? r.arm.name + ' (' + rarName(r.arm) + '). ' + gearDesc(r.arm) : 'none') + '</div>' +
        '<div><b>Perks:</b> ' + (perks.length ? perks.join(', ') : 'none yet') + '</div>' +
        '<div><b>Pets:</b> ' + (S.team.length ? petTeamNames() : 'none yet (look for p on the map)') + '</div>' +
+       '<div><b>Turrets:</b> ' + (S.tkit.length ? (r.turs ? r.turs.length : 0) + ' set up, ' + S.tkit.length + ' in your kit' : 'none yet (buy them in the Turret shop at camp)') + '</div>' +
        '<div><b>Class:</b> ' + curClass()[0] + '. ' + clsEffectText(S.cls || 0) + '.</div></div>';
 
   h += '<div class="footer"><span>' + zoneOf(r.floor).n + '. Deepest floor: ' + S.best +
@@ -3159,7 +3179,7 @@ function renderBook() {
     h += '<h3>Things on the map</h3>' +
       '<div class="entry"><code>$</code> gold. <code>!</code> potion. <code>?</code> scroll. <code>*</code> treasure chest (some are Mimics). ' +
       '<code>)</code> weapon. <code>[</code> armor. <code>&amp;</code> merchant. <code>+</code> shrine. <code>"</code> relic (free perk). ' +
-      '<code>{</code> enchanting table (new weapon modifier). <code>&gt;</code> stairs. <code>E</code> elevator.</div>' +
+      '<code>{</code> enchanting table (new weapon modifier). <code>&gt;</code> stairs. <code>E</code> elevator. <code>T</code> your turret.</div>' +
       '<h3>Floor squares</h3>' +
       '<div class="entry"><code>~</code> Lava: burns you for 15% of your max HP.</div>' +
       '<div class="entry"><code>^</code> Spikes: hurt you for 10% of your max HP.</div>' +
@@ -3776,6 +3796,245 @@ function renderArmor() {
   return h + '</div>';
 }
 
+// ================= TURRETS =================
+// 10,000 turrets you buy at camp and keep forever. Up to 10 go in your kit, and in a run you set them up next to you.
+// Turret i: kind i % 10, name from Math.floor(i / 10), and it gets stronger the higher i is.
+var T_N = 10000, T_TIER = 1000, T_PAGE = 25, TUR_MAX = 10, turGold = 0;
+var TKINDS = [
+  { n: 'Ballista',      fx: 'shoot',  rng: 4, cd: 2,  pow: 0.25, nouns: ['Ballista', 'Bolt Tower', 'Arrow Post', 'Crossbow Nest'] },
+  { n: 'Cannon',        fx: 'cannon', rng: 5, cd: 4,  pow: 0.6,  nouns: ['Cannon', 'Bombard', 'Culverin', 'Siege Gun'] },
+  { n: 'Flamer',        fx: 'burn',   rng: 3, cd: 3,  pow: 0.2,  nouns: ['Flamer', 'Brazier', 'Fire Spout', 'Ember Pot'] },
+  { n: 'Frost spire',   fx: 'freeze', rng: 3, cd: 5,  pow: 0.1,  nouns: ['Frost Spire', 'Ice Totem', 'Chill Lamp', 'Snow Obelisk'] },
+  { n: 'Tesla coil',    fx: 'chain',  rng: 4, cd: 3,  pow: 0.15, nouns: ['Tesla Coil', 'Spark Rod', 'Storm Pylon', 'Arc Tower'] },
+  { n: 'Venom spitter', fx: 'poison', rng: 3, cd: 3,  pow: 0.15, nouns: ['Venom Spitter', 'Toxin Vat', 'Thorn Pod', 'Acid Fount'] },
+  { n: 'Mending totem', fx: 'heal',   rng: 4, cd: 3,  pow: 0,    nouns: ['Mending Totem', 'Healing Font', 'Life Shrine', 'Herb Lantern'] },
+  { n: 'Ward stone',    fx: 'shield', rng: 4, cd: 10, pow: 0,    nouns: ['Ward Stone', 'Shield Pylon', 'Aegis Post', 'Guard Idol'] },
+  { n: 'Mortar',        fx: 'pulse',  rng: 2, cd: 4,  pow: 0.2,  nouns: ['Mortar', 'Quake Drum', 'Thunder Bell', 'Blast Pit'] },
+  { n: 'Beacon',        fx: 'beam',   rng: 6, cd: 3,  pow: 0.3,  nouns: ['Sun Beacon', 'Ray Prism', 'Lance Tower', 'Light Spire'] }
+];
+var TADJ = ['Copper', 'Brass', 'Iron', 'Bronze', 'Steel', 'Oak', 'Stone', 'Rune', 'Clockwork', 'Gear',
+            'Ember', 'Frost', 'Storm', 'Shadow', 'Sun', 'Moon', 'Star', 'Void', 'Crystal', 'Golden',
+            'Silver', 'Obsidian', 'Jade', 'Ruby', 'Sapphire', 'Emerald', 'Amber', 'Ivory', 'Granite', 'Thunder',
+            'Tide', 'Ash', 'Dawn', 'Dusk', 'Comet', 'Dragon', 'Phoenix', 'Titan', 'Royal', 'Ancient',
+            'Mystic', 'Wild', 'Brave', 'Cloud', 'Glacier', 'Volcano', 'Thorn', 'Quartz', 'Cosmic', 'Eternal'];
+var TTRAITS = [
+  { id: 'rapid',  n: 'Rapid',      d: 'acts 1 turn sooner' },
+  { id: 'long',   n: 'Long-range', d: 'reaches farther' },
+  { id: 'heavy',  n: 'Heavy',      d: '+40% power, but 1 turn slower' },
+  { id: 'steady', n: 'Steady',     d: '+20% power' },
+  { id: 'keen',   n: 'Keen',       d: '20% chance of double damage' },
+  { id: 'stun',   n: 'Stunning',   d: '15% chance to stun for 1 turn' },
+  { id: 'twin',   n: 'Twin',       d: 'hits one more monster' },
+  { id: 'pierce', n: 'Piercing',   d: 'ignores armor' },
+  { id: 'leech',  n: 'Leeching',   d: 'heals you 10% of the damage it deals' },
+  { id: 'gilded', n: 'Gilded',     d: '+25% gold from monsters it defeats' }
+];
+function tTrait(id) { for (var j = 0; j < TTRAITS.length; j++) if (TTRAITS[j].id === id) return TTRAITS[j]; return TTRAITS[0]; }
+// Everything about turret i, worked out from its number (same every time).
+function tStat(i) {
+  var K = TKINDS[i % 10], k = Math.floor(i / 10), P = 0.6 + 9 * i / (T_N - 1), raw = (i * 7 + k * 3) % 10;
+  var t = TTRAITS[K.fx === 'shield' ? raw % 2 : (K.fx === 'heal' ? raw % 4 : raw)].id;   // helpers only get traits that help them
+  if (K.fx === 'pulse' && t === 'twin') t = 'steady';
+  if (K.fx === 'beam' && t === 'pierce') t = 'keen';
+  var s = { i: i, K: K, t: t, P: P, rng: K.rng, cd: K.cd, pow: K.pow * P, n: K.fx === 'chain' ? 3 : 1 };
+  if (K.fx === 'heal') s.pow = 0.02 + 0.01 * P;
+  if (K.fx === 'shield') s.cd = Math.max(4, 10 - Math.floor(P / 2));
+  if (t === 'rapid') s.cd = Math.max(1, s.cd - 1);
+  else if (t === 'long') s.rng += K.fx === 'pulse' ? 1 : 2;
+  else if (t === 'heavy') { s.pow *= 1.4; s.cd++; }
+  else if (t === 'steady') s.pow *= 1.2;
+  else if (t === 'twin') s.n++;
+  return s;
+}
+function tName(i) {
+  var k = Math.floor(i / 10);
+  return tTrait(tStat(i).t).n + ' ' + TADJ[k % 50] + ' ' + TKINDS[i % 10].nouns[Math.floor(k / 50) % 4] + ' Mk ' + roman(Math.floor(k / 200) + 1);
+}
+function tShort(i) { var k = Math.floor(i / 10); return TADJ[k % 50] + ' ' + TKINDS[i % 10].nouns[Math.floor(k / 50) % 4]; }
+function tRar(i) { return Math.min(RAR.length - 1, Math.floor(i / 1112)); }
+function tPrice(i) { return niceNum(60 * Math.pow(1.00225, i)); }
+function tPct(v) { return Math.round(v * 100) + '%'; }
+function tDesc(i) {
+  var s = tStat(i), e = s.cd > 1 ? 'Every ' + s.cd + ' turns, ' : 'Every turn, ', R = s.rng + ' squares', A = tPct(s.pow) + ' of your attack';
+  var who = s.n > 1 ? 'up to ' + s.n + ' monsters' : 'the nearest monster', t;
+  switch (s.K.fx) {
+    case 'shoot':  t = e + 'shoots ' + who + ' within ' + R + ' (' + A + ')'; break;
+    case 'cannon': t = e + 'fires a cannonball at ' + who + ' within ' + R + ' (' + A + ')'; break;
+    case 'burn':   t = e + 'burns ' + who + ' within ' + R + ' (' + A + ', then half that each turn for 3 turns)'; break;
+    case 'freeze': t = e + 'freezes ' + who + ' within ' + R + ' for ' + (s.P >= 4 ? '2 turns' : '1 turn') + ' (' + A + ')'; break;
+    case 'chain':  t = e + 'zaps ' + who + ' within ' + R + ' (' + A + ' each)'; break;
+    case 'poison': t = e + 'poisons ' + who + ' within ' + R + ' (' + A + ', then half that each turn for 3 turns)'; break;
+    case 'heal':   t = e + 'heals you ' + tPct(s.pow) + ' of your max HP when you are hurt and within ' + R + ' of it'; break;
+    case 'shield': t = e + 'puts a ward on you that blocks the next hit, when you are within ' + R + ' of it'; break;
+    case 'pulse':  t = e + 'hits every monster within ' + R + ' of it (' + A + ' each)'; break;
+    default:       t = e + 'fires a beam that ignores armor at ' + who + ' within ' + R + ' (' + A + ')';
+  }
+  var T = tTrait(s.t);
+  return t + '. ' + T.n + ': ' + T.d;
+}
+function tKitNames() { var out = []; for (var k = 0; k < S.tkit.length; k++) out.push(tShort(S.tkit[k])); return out.join(', '); }
+function tOwned() { return countKeys(S.tur); }
+
+// In a run: turrets stand on the map, block squares, and act every turn after your pets.
+function turretAt(x, y) {
+  var t = S.run && S.run.turs;
+  if (!t) return null;
+  for (var j = 0; j < t.length; j++) if (t[j].x === x && t[j].y === y) return t[j];
+  return null;
+}
+// The free square next to you that is closest to a monster you can see.
+function turretSpot() {
+  var r = S.run, best = null, bd = 0, ms = seenMonsters(), x, y, dx, dy, j;
+  for (dy = -1; dy <= 1; dy++) for (dx = -1; dx <= 1; dx++) {
+    x = r.px + dx; y = r.py + dy;
+    if ((!dx && !dy) || x < 0 || y < 0 || x >= W || y >= H || r.map[y][x] !== 0) continue;
+    if (monAt(x, y) || itemAt(x, y) >= 0 || turretAt(x, y) || (x === r.sx && y === r.sy) || (x === r.ex && y === r.ey)) continue;
+    var d = 99;
+    for (j = 0; j < ms.length; j++) d = Math.min(d, cheb(x, y, ms[j].x, ms[j].y));
+    if (!best || d < bd) { best = { x: x, y: y }; bd = d; }
+  }
+  return best;
+}
+function openTurrets() {
+  var r = S.run;
+  if (!r || r.panel || !S.tkit.length) return;
+  ui.elev = false; ui.bag = false; ui.tur = true;
+  render();
+}
+function placeTurret(i) {
+  var r = S.run;
+  if (!r || r.panel || S.tkit.indexOf(i) < 0) return;
+  if (!r.turs) r.turs = [];
+  if (!r.tUsed) r.tUsed = {};
+  if (r.tUsed[i] || r.turs.length >= TUR_MAX) return;
+  var p = turretSpot();
+  if (!p) { r.log = ['There is no free square next to you for a turret.']; render(); return; }
+  ui.tur = false;
+  newTurn();
+  r.tUsed[i] = 1;
+  r.turs.push({ i: i, x: p.x, y: p.y, cd: 0 });
+  stat('tplace');
+  say('You set up the ' + tName(i) + '.');
+  endTurn();
+}
+function pickUpTurret(t) {
+  var r = S.run;
+  r.turs.splice(r.turs.indexOf(t), 1);
+  if (r.tUsed) delete r.tUsed[t.i];
+  say('You pick up the ' + tShort(t.i) + '. You can set it up again.');
+}
+function turretPanel() {
+  var r = S.run, n = r.turs ? r.turs.length : 0, spot = !!turretSpot();
+  var h = '<div class="panel"><b class="ptitle">Turrets</b><p>' + n + ' of ' + TUR_MAX + ' set up. Setting one up uses your turn. Walk into a turret to pick it up.</p>';
+  if (!spot) h += '<p><b>No free square next to you.</b></p>';
+  for (var k = 0; k < S.tkit.length; k++) {
+    var i = S.tkit[k], used = r.tUsed && r.tUsed[i];
+    h += choice(tShort(i), used ? 'Set up' : tTrait(tStat(i).t).n + ' ' + TKINDS[i % 10].n.toLowerCase(), 'placeTurret(' + i + ')', used || !spot || n >= TUR_MAX);
+  }
+  return h + btn('Close', 'ui.tur=false;render()', 'wide small') + '</div>';
+}
+function turretsAct() {
+  var r = S.run;
+  if (!r.turs || !r.turs.length) return;
+  var list = r.turs.slice();
+  for (var k = 0; k < list.length && r.hp > 0; k++) {
+    var t = list[k], s = tStat(t.i), fx = s.K.fx, nm = 'Your ' + tShort(t.i), acted = false, j;
+    if (t.cd > 0) { t.cd--; continue; }
+    var near = cheb(t.x, t.y, r.px, r.py) <= s.rng;
+    if (fx === 'heal') {
+      if (near && r.hp < r.maxHp) { say(nm + ' heals you for ' + heal(Math.max(1, Math.round(r.maxHp * s.pow))) + ' HP.'); acted = true; }
+    } else if (fx === 'shield') {
+      if (near && !r.turShield) { r.turShield = true; say(nm + ' puts a ward around you.'); acted = true; }
+    } else {
+      var ms = [];
+      for (j = 0; j < r.mons.length; j++) {
+        var m = r.mons[j];
+        if (cheb(t.x, t.y, m.x, m.y) <= s.rng && visible(m.x, m.y) && !hiddenMon(m)) ms.push({ m: m, d: cheb(t.x, t.y, m.x, m.y) });
+      }
+      ms.sort(function (a, b) { return a.d - b.d; });
+      if (fx !== 'pulse') ms = ms.slice(0, s.n);
+      if (ms.length) {
+        acted = true;
+        if (fx === 'pulse') say(nm + ' blasts ' + ms.length + (ms.length > 1 ? ' monsters!' : ' monster!'));
+        for (j = 0; j < ms.length; j++) turretHit(ms[j].m, s, fx === 'pulse' ? '' : nm);
+      }
+    }
+    if (acted) t.cd = s.cd - 1;
+  }
+}
+function turretHit(m, s, nm) {
+  var r = S.run, fx = s.K.fx;
+  if (r.mons.indexOf(m) < 0) return;
+  m.awake = true;
+  var d = atkOf() * s.pow, keen = s.t === 'keen' && chance(20);
+  if (keen) d *= 2;
+  d = Math.max(1, Math.round(d - (fx === 'beam' || s.t === 'pierce' ? 0 : m.def / 2)));
+  if (has(m, 'swarm')) d = Math.max(1, Math.ceil(d / 2));
+  m.hp -= d;
+  stat('c_Damage Dealer', d);
+  var verb = { shoot: 'shoots', cannon: 'blasts', burn: 'burns', freeze: 'freezes', chain: 'zaps', poison: 'poisons', beam: 'beams' }[fx] || 'hits';
+  if (nm) say(nm + ' ' + verb + ' ' + the(m.name) + ' for ' + d + '.' + (keen ? ' Critical!' : ''));
+  if (s.t === 'leech') heal(Math.max(1, Math.round(d * 0.1)));
+  if (m.hp <= 0) { killHow = 'turret'; turGold = s.t === 'gilded' ? 1.25 : 0; killMon(m); turGold = 0; return; }
+  var still = !TYPES[m.i].heart;
+  if (fx === 'burn' || fx === 'poison') m.dot = { d: Math.max(1, Math.round(atkOf() * s.pow / 2)), t: 3, w: fx === 'burn' ? 'burning' : 'poisoned' };
+  if (fx === 'freeze' && still) m.frozen = Math.max(m.frozen, s.P >= 4 ? 2 : 1);
+  if (s.t === 'stun' && still && chance(15)) m.frozen = Math.max(m.frozen, 1);
+}
+
+// Camp: the turret shop and your kit
+function openTurShop() { ui.turs = true; ui.bookTop = true; render(); }
+function tGo(tier, page) { ui.tTier = tier; ui.tPage = page; ui.bookTop = true; render(); }
+// Jump to the strongest turret you can afford and don't own yet.
+function tBest() {
+  for (var i = T_N - 1; i >= 0; i--) if (!S.tur[i] && tPrice(i) <= S.gold) { tGo(Math.floor(i / T_TIER) + 1, Math.floor((i % T_TIER) / T_PAGE)); return; }
+  tGo(1, 0);
+}
+function buyTur(i) {
+  var c = tPrice(i);
+  if (S.tur[i] || S.gold < c) return;
+  S.gold -= c; S.tur[i] = 1;
+  if (S.tkit.length < TUR_MAX) S.tkit.push(i);
+  stat('a_Big Spender', c);
+  campClaim(); save(); render();
+}
+function kitAdd(i) { if (S.tur[i] && S.tkit.indexOf(i) < 0 && S.tkit.length < TUR_MAX) { S.tkit.push(i); save(); render(); } }
+function kitRemove(i) { var k = S.tkit.indexOf(i); if (k >= 0) { S.tkit.splice(k, 1); save(); render(); } }
+function tLine(i) { return '<b>' + tName(i) + '</b> <i>(' + RAR[tRar(i)] + ' ' + TKINDS[i % 10].n.toLowerCase() + ')</i>'; }
+function tButtons(i) {
+  if (!S.tur[i]) return btn('Buy for ' + fmt(tPrice(i)) + ' gold', 'buyTur(' + i + ')', 'small', S.gold < tPrice(i));
+  if (S.tkit.indexOf(i) >= 0) return '<b class="found">In kit</b> ' + btn('Remove from kit', 'kitRemove(' + i + ')', 'small');
+  return '<span class="found">Owned</span> ' + btn('Add to kit', 'kitAdd(' + i + ')', 'small main', S.tkit.length >= TUR_MAX);
+}
+function renderTurrets() {
+  var h = '<div class="book"><h2>Turret shop</h2><div class="tabs">' + btn('Back to camp', 'ui.turs=false;render()', 'small') + '</div>', i, k;
+  h += '<p class="each">You have <b>' + fmt(S.gold) + ' gold</b>. You own ' + fmt(tOwned()) + ' of ' + fmt(T_N) + ' turrets. Turrets you buy are yours forever, even after you ascend. ' +
+       'Up to ' + TUR_MAX + ' go in your kit. In a run, tap Turrets to set one up next to you. Each kit turret can be set up once per floor, and they all come back on the next floor. ' +
+       'Turret damage is a share of your attack, so they get stronger as you do.</p>';
+  h += '<h3>Your kit (' + S.tkit.length + ' of ' + TUR_MAX + ')</h3>';
+  if (!S.tkit.length) h += '<p class="each">Empty. A turret you buy goes straight into your kit.</p>';
+  for (k = 0; k < S.tkit.length; k++) {
+    i = S.tkit[k];
+    h += '<div class="entry">' + tLine(i) + '<br><span class="each">' + tDesc(i) + '.</span><br>' + btn('Remove from kit', 'kitRemove(' + i + ')', 'small') + '</div>';
+  }
+  h += '<div class="tabs">' + btn('Best I can afford', 'tBest()', 'small main') + '</div><h3>Tiers</h3><div class="tabs">';
+  for (i = 1; i <= T_N / T_TIER; i++) h += btn(i + ': ' + fmt(tPrice((i - 1) * T_TIER)) + '+', 'tGo(' + i + ',0)', 'small' + (ui.tTier === i ? ' main' : ''));
+  var pages = T_TIER / T_PAGE;
+  ui.tPage = Math.max(0, Math.min(ui.tPage, pages - 1));
+  var nav = '<div class="tabs">' + btn('&laquo; 10', 'tGo(' + ui.tTier + ',' + (ui.tPage - 10) + ')', 'small', ui.tPage < 10) +
+            btn('&laquo; Back', 'tGo(' + ui.tTier + ',' + (ui.tPage - 1) + ')', 'small', ui.tPage <= 0) +
+            '<span class="each"> Page ' + (ui.tPage + 1) + ' of ' + pages + ' </span>' +
+            btn('Next &raquo;', 'tGo(' + ui.tTier + ',' + (ui.tPage + 1) + ')', 'small', ui.tPage >= pages - 1) +
+            btn('10 &raquo;', 'tGo(' + ui.tTier + ',' + (ui.tPage + 10) + ')', 'small', ui.tPage > pages - 11) + '</div>';
+  h += '</div><h3>Tier ' + ui.tTier + '</h3>' + nav;
+  var start = (ui.tTier - 1) * T_TIER + ui.tPage * T_PAGE;
+  for (i = start; i < start + T_PAGE && i < T_N; i++) {
+    h += '<div class="entry">#' + fmt(i + 1) + ' ' + tLine(i) + '<br><span class="each">' + tDesc(i) + '.</span><br>' + tButtons(i) + '</div>';
+  }
+  h += nav + '<div class="tabs bottom">' + btn('Back to top', 'window.scrollTo(0,0)', 'small') + btn('Back to camp', 'ui.turs=false;render()', 'small') + '</div>';
+  return h + '</div>';
+}
+
 // Reset everything. The first tap arms the button, the second tap erases.
 function resetTap() {
   if (!ui.resetArm) { ui.resetArm = true; render(); return; }
@@ -3836,6 +4095,8 @@ function renderCamp() {
        '. You own ' + cwOwned() + ' of ' + fmt(CW_N) + ' shop weapons.</p>' + btn('Weapon shop', 'openWeapons()', '');
   h += '<h2>Armor</h2><p class="each">' + (S.caEq >= 0 ? 'Starting armor: <b>' + campArm(S.caEq).name + '</b> (armor ' + campArm(S.caEq).def + ')' : 'Starting armor: none from the shop') +
        '. You own ' + caOwned() + ' of ' + fmt(CA_N) + ' shop armors.</p>' + btn('Armor shop', 'openArmor()', '');
+  h += '<h2>Turrets</h2><p class="each">Kit (' + S.tkit.length + ' of ' + TUR_MAX + '): ' + (S.tkit.length ? tKitNames() : 'empty') +
+       '. You own ' + fmt(tOwned()) + ' of ' + fmt(T_N) + ' turrets.</p>' + btn('Turret shop', 'openTurShop()', '');
   h += '<h2>Pets</h2><p class="each">Team (' + S.team.length + ' of ' + TEAM_MAX + '): ' + (S.team.length ? petTeamNames() : 'none yet. Look for p on the map.') + '</p>' +
        btn('Manage pets', 'openPets()', '');
 
@@ -3848,7 +4109,8 @@ function renderCamp() {
        '<tr><td><b>Kinds of floors visited:</b> ' + countSeen('l') + ' of ' + LEVELS.length + '</td></tr>' +
        '<tr><td><b>Unique floors visited:</b> ' + fmt(ftCount()) + ' of ' + fmt(FT_N) + '</td></tr>' +
        '<tr><td><b>Zones visited:</b> ' + countSeen('z') + ' of ' + fmt(ZONES.length) + '</td></tr>' +
-       '<tr><td><b>Pets found:</b> ' + fmt(countKeys(S.pets)) + ' of ' + fmt(PETS.length) + '</td></tr></table>';
+       '<tr><td><b>Pets found:</b> ' + fmt(countKeys(S.pets)) + ' of ' + fmt(PETS.length) + '</td></tr>' +
+       '<tr><td><b>Turrets owned:</b> ' + fmt(tOwned()) + ' of ' + fmt(T_N) + '</td></tr></table>';
 
   // achievements
   h += '<h2>Achievements</h2><p class="each">You\'ve earned <b>' + fmt(achTotal()) + '</b> achievement levels. There are ' + fmt(ACH.length + ACH2.length) +
@@ -3900,10 +4162,10 @@ function renderCamp() {
 }
 
 function render() {
-  if (S.run) { ui.pets = false; ui.classes = false; ui.achs = false; ui.wpns = false; ui.arms = false; }
-  document.body.className = ui.book || ui.pets || ui.classes || ui.achs || ui.wpns || ui.arms ? 'inbook' : (S.run ? 'inrun' : '');
+  if (S.run) { ui.pets = false; ui.classes = false; ui.achs = false; ui.wpns = false; ui.arms = false; ui.turs = false; }
+  document.body.className = ui.book || ui.pets || ui.classes || ui.achs || ui.wpns || ui.arms || ui.turs ? 'inbook' : (S.run ? 'inrun' : '');
   document.getElementById('game').innerHTML = ui.book ? renderBook() : (ui.pets ? renderPets() : (ui.classes ? renderClasses() :
-                                              (ui.achs ? renderAch() : (ui.wpns ? renderWeapons() : (ui.arms ? renderArmor() : (S.run ? renderRun() : renderCamp()))))));
+                                              (ui.achs ? renderAch() : (ui.wpns ? renderWeapons() : (ui.arms ? renderArmor() : (ui.turs ? renderTurrets() : (S.run ? renderRun() : renderCamp())))))));
   if (ui.bookTop) { ui.bookTop = false; window.scrollTo(0, 0); }
 }
 window.onresize = function () { fitMap(); if (S) render(); };

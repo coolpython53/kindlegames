@@ -54,6 +54,7 @@ h2 { font-size: 22px; margin: 16px 0 6px; }
 .map td.lava { background: #9a9a9a; color: #fff; }     /* lava ~ */
 .map td.wet { background: #ececec; }                   /* water, web, mud, sand = */
 .map td.ice { background: #f4f4f4; }                   /* ice - */
+.map td.tur { background: #bbb; border: 2px solid #000; }  /* your turret T */
 .map td.portal { border: 2px solid #000; }
 .map td.blast { border: 3px dotted #000; }
 .map td.mim { border: 2px dashed #000; }                /* a pet warns: this chest is a Mimic */             /* a bomb or rock is about to land here */
